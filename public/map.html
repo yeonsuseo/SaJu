@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사주 궁합 Map</title>
+  <meta name="description" content="니랑 내랑 사주 궁합 몇 점인지 함 까보자!">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="bg-orb bg-orb-3"></div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div>
+    <div class="spinner"></div>
+    <div class="loading-inner" id="loadingText">사주 기운 억수로 뜯어보는 중이다...</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 화면에 팍! 뜨는 내 순위 대형 스플래시 오버레이 -->
+<div class="rank-splash-overlay" id="rankSplashOverlay">
+  <canvas class="rank-splash-canvas" id="rankSplashCanvas"></canvas>
+  <div class="rank-splash-card">
+    <div class="rank-splash-crown" id="splashCrown">👑</div>
+    <div class="rank-splash-subtitle" id="splashSubtitle">니 궁합 순위다!</div>
+    <div class="rank-splash-number" id="splashRankNumber">1위</div>
+    <div class="rank-splash-score-badge" id="splashScoreBadge">100점 · 천생연분 🌟</div>
+    <div class="rank-splash-msg" id="splashMsg">기운이 억수로 잘 맞아떨어지네!</div>
+    <button class="rank-splash-btn" onclick="closeRankSplash()">
+      순위표 함 까보자 ↓
+    </button>
+  </div>
+</div>
+
+<div class="container container-wide">
+
+  <!-- 페이지 로딩 중 -->
+  <div id="pageLoading" style="text-align:center; padding:100px 0;">
+    <div class="spinner"></div>
+    <p style="color:var(--text-muted);margin-top:16px;font-size:0.9rem;">불러오는 중이다, 쫌만 기달리라...</p>
+  </div>
+
+  <!-- 에러 상태 -->
+  <div id="errorState" style="display:none;" class="fade-in">
+    <div class="site-header">
+      <div class="site-logo">🌌 사주 궁합</div>
+    </div>
+    <div class="card" style="text-align:center; padding:60px 32px;">
+      <div style="font-size:3rem;margin-bottom:16px;">🔮</div>
+      <h2 style="font-family:'Noto Serif KR',serif;color:var(--text-primary);margin-bottom:12px;">없는 Map이다 임마</h2>
+      <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">주소 다시 잘 보고 들어와라.</p>
+      <a href="/" class="btn btn-outline" style="display:inline-flex;">내 Map 맹글러 가기</a>
+    </div>
+  </div>
+
+  <!-- 메인 컨텐츠 -->
+  <div id="mainContent" style="display:none;" class="fade-in">
+
+    <!-- 헤더 -->
+    <header class="site-header" style="padding-bottom:32px;">
+      <div class="site-logo">🌌 사주 궁합</div>
+      <div class="site-subtitle" id="headerSub">니랑 내랑 얼마나 잘 맞는지 함 까보자!</div>
+    </header>
+
+    <!-- 소유자 배너 -->
+    <div class="owner-banner" id="ownerBanner">
+      <div class="owner-avatar" id="ownerAvatar"></div>
+      <div class="owner-info">
+        <h2 id="ownerNameDisplay"></h2>
+        <p id="ownerBirthDisplay"></p>
+        <p id="ownerSajuSummary" style="margin-top:4px; color:var(--lavender); font-size:0.85rem;"></p>
+      </div>
+      <div class="visitor-count-badge" id="visitorCountBadge">
+        <span>👥</span><span id="visitorCountNum">0</span>명이나 까봤다
+      </div>
+    </div>
+
+    <!-- 소유자 사주 四柱 -->
+    <div class="card fade-in" style="animation-delay:0.1s; margin-top:20px;">
+      <div class="card-title">
+        <span class="icon">✦</span>
+        <span id="ownerPillarTitle"></span>의 사주 기둥 4개
+      </div>
+      <div id="ownerPillars" class="saju-pillars"></div>
+    </div>
+
+    <!-- 방문자 입력 폼 -->
+    <div class="card fade-in" id="formCard" style="animation-delay:0.2s; margin-top:20px;">
+      <div class="card-title">
+        <span class="icon">🌙</span>
+        니 사주 넣고 내랑 궁합 까보자
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">니 이름이나 닉네임 적어라 <span>*</span></label>
+        <input type="text" id="visitorName" class="form-input" placeholder="예: 김민준" maxlength="20">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">성별 골라봐라 <span>*</span></label>
+        <div class="gender-row">
+          <button class="gender-btn" data-gender="남" onclick="selectVisitorGender(this)">♂ 머스마</button>
+          <button class="gender-btn" data-gender="여" onclick="selectVisitorGender(this)">♀ 가시나</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">생년월일 골라봐라 <span>*</span></label>
+        <div class="date-row">
+          <select id="visitorYear" class="form-input">
+            <option value="">년도 선택</option>
+          </select>
+          <select id="visitorMonth" class="form-input">
+            <option value="">월 선택</option>
+            <option value="1">1월</option><option value="2">2월</option>
+            <option value="3">3월</option><option value="4">4월</option>
+            <option value="5">5월</option><option value="6">6월</option>
+            <option value="7">7월</option><option value="8">8월</option>
+            <option value="9">9월</option><option value="10">10월</option>
+            <option value="11">11월</option><option value="12">12월</option>
+          </select>
+          <select id="visitorDay" class="form-input">
+            <option value="">일 선택</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">태어난 시간 <span style="color:var(--text-muted);font-size:0.8rem;">(모르면 걍 비워둬라)</span></label>
+        <div class="time-row">
+          <select id="visitorHour" class="form-input">
+            <option value="">시 모름 (패스)</option>
+            <option value="23">자시 (23:00~00:59 / 쥐)</option>
+            <option value="1">축시 (01:00~02:59 / 소)</option>
+            <option value="3">인시 (03:00~04:59 / 호랭이)</option>
+            <option value="5">묘시 (05:00~06:59 / 토끼)</option>
+            <option value="7">진시 (07:00~08:59 / 용)</option>
+            <option value="9">사시 (09:00~10:59 / 뱀)</option>
+            <option value="11">오시 (11:00~12:59 / 말)</option>
+            <option value="13">미시 (13:00~14:59 / 양)</option>
+            <option value="15">신시 (15:00~16:59 / 원숭이)</option>
+            <option value="17">유시 (17:00~18:59 / 닭)</option>
+            <option value="19">술시 (19:00~20:59 / 개)</option>
+            <option value="21">해시 (21:00~22:59 / 돼지)</option>
+          </select>
+          <select id="visitorMinute" class="form-input">
+            <option value="">분 선택 (0~59분)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:28px;">
+        <button class="btn btn-gold" onclick="submitVisitor()" style="font-size:1.1rem; padding:18px;">
+          🔮 내랑 궁합 점수 까보기!
+        </button>
+      </div>
+    </div>
+
+    <!-- 궁합 순위표 -->
+    <div class="card fade-in" id="rankingCard" style="animation-delay:0.3s; margin-top:20px;">
+      <div class="card-title">
+        <span class="icon">🏆</span>
+        궁합 순위표 (누가누가 잘 맞나)
+        <span class="visitor-count-badge" style="margin-left:auto; font-size:0.8rem; color:var(--text-muted);">
+          총 <span id="rankingTotalCount">0</span>명 참가
+        </span>
+      </div>
+
+      <div id="rankingBody">
+        <div class="empty-state">
+          <span class="emoji">🌟</span>
+          <p>아직 아무도 궁합 안 봤다 ㅋ<br>니가 1빠따로 함 까봐라!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 내 Map 만들기 배너 -->
+    <div class="card" style="margin-top:20px; text-align:center; padding:28px;">
+      <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:16px;">
+        🌌 니도 사주 Map 맹글어서 친구들한테 뿌려볼래?
+      </p>
+      <a href="/" class="btn btn-outline" style="display:inline-flex; width:auto; padding:12px 28px;">
+        나도 사주 Map 맹글기
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script src="/js/saju.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  let mapId = '';
+  let ownerData = null;
+  let visitorGender = '';
+
+  // ── 생년월일 콤보박스 옵션 채우기 ──────────────────────
+  function initVisitorDateSelects() {
+    const yearSelect = document.getElementById('visitorYear');
+    const daySelect  = document.getElementById('visitorDay');
+
+    // 년도 (2024년부터 1940년까지 역순)
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear; y >= 1940; y--) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = `${y}년`;
+      if (y === 1999) opt.selected = true; // 기본값
+      yearSelect.appendChild(opt);
+    }
+
+    // 일 (1일부터 31일까지)
+    for (let d = 1; d <= 31; d++) {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = `${d}일`;
+      if (d === 15) opt.selected = true; // 기본값
+      daySelect.appendChild(opt);
+    }
+
+    // 분 (0분부터 59분까지 1분 단위)
+    const minSelect = document.getElementById('visitorMinute');
+    for (let m = 0; m < 60; m++) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = `${m}분`;
+      minSelect.appendChild(opt);
+    }
+  }
+
+  initVisitorDateSelects();
+
+  // ── 페이지 초기화 ────────────────────────────────────
+  async function initPage() {
+    const params = new URLSearchParams(window.location.search);
+    mapId = params.get('id');
+    const highlightId = params.get('highlight');
+
+    if (!mapId) {
+      showError();
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/maps/${mapId}`);
+      if (!res.ok) throw new Error('Not found');
+
+      const data = await res.json();
+      ownerData = data.map;
+
+      renderOwner(data.map);
+      renderRankings(data.rankings, data.visitorCount, highlightId);
+
+      document.getElementById('pageLoading').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'block';
+
+      // 페이지 타이틀 업데이트
+      document.title = `${data.map.name}의 사주 궁합 Map이다!`;
+
+      // 특정 방문자 순위 하이라이트 및 대형 스플래시 애니메이션
+      if (highlightId) {
+        const myRankObj = data.rankings.find(r => r.id === highlightId);
+        if (myRankObj) {
+          showRankSplash(myRankObj, data.map.name);
+        } else {
+          scrollToRankRow(highlightId);
+        }
+      }
+
+    } catch (err) {
+      showError();
+    }
+  }
+
+  function showError() {
+    document.getElementById('pageLoading').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+  }
+
+  // ── 소유자 렌더링 ────────────────────────────────────
+  function renderOwner(map) {
+    const saju = map.saju_json;
+
+    document.getElementById('ownerAvatar').textContent = map.name.charAt(0);
+    document.getElementById('ownerNameDisplay').textContent = `${map.name} (${map.gender === '남' ? '머스마' : '가시나'})`;
+    document.getElementById('ownerPillarTitle').textContent = map.name;
+    document.getElementById('ownerBirthDisplay').textContent =
+      `${map.birth_year}년 ${map.birth_month}월 ${map.birth_day}일생`;
+    document.getElementById('ownerSajuSummary').textContent =
+      `일주: ${saju.dayPillar.ganji} · 일간 기운: ${saju.dayPillar.element}`;
+
+    document.getElementById('ownerPillars').innerHTML = renderSajuPillars(saju);
+  }
+
+  // ── 순위표 렌더링 (설명 생략 없이 전체 표시) ─────────────
+  function renderRankings(rankings, total, highlightId) {
+    document.getElementById('rankingTotalCount').textContent = total || 0;
+    document.getElementById('visitorCountNum').textContent = total || 0;
+
+    const body = document.getElementById('rankingBody');
+
+    if (!rankings || rankings.length === 0) {
+      body.innerHTML = `
+        <div class="empty-state">
+          <span class="emoji">🌟</span>
+          <p>아직 아무도 궁합 안 봤다 ㅋ<br>니가 1빠따로 함 까봐라!</p>
+        </div>`;
+      return;
+    }
+
+    const rows = rankings.map(r => {
+      const grade = getGradeFromScore(r.score);
+      const rankClass = r.rank <= 3 ? `rank-${r.rank}` : 'rank-n';
+      const isMe = r.id === highlightId;
+      const highlightClass = isMe ? 'highlight-my-rank' : '';
+      const meBadge = isMe ? '<span class="my-rank-indicator">내 순위 ✨</span>' : '';
+
+      return `
+        <tr class="${highlightClass}" id="row-${r.id}">
+          <td><span class="rank-badge ${rankClass}">${r.rank}</span></td>
+          <td style="font-weight:600;color:var(--text-primary);white-space:nowrap;">
+            ${escapeHtml(r.name)} ${meBadge}
+          </td>
+          <td><span class="score-chip score-${grade}">${r.score}점</span></td>
+          <td class="ranking-desc-cell">${escapeHtml(r.summary)}</td>
+        </tr>`;
+    }).join('');
+
+    body.innerHTML = `
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th style="width:50px;">순위</th>
+            <th style="width:110px;">이름</th>
+            <th style="width:80px;">점수</th>
+            <th>궁합 총평</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // ── 방문자 성별 선택 ──────────────────────────────────
+  function selectVisitorGender(btn) {
+    document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    visitorGender = btn.dataset.gender;
+  }
+
+  // ── 방문자 제출 ───────────────────────────────────────
+  async function submitVisitor() {
+    const name   = document.getElementById('visitorName').value.trim();
+    const gender = visitorGender;
+    const year   = parseInt(document.getElementById('visitorYear').value);
+    const month  = parseInt(document.getElementById('visitorMonth').value);
+    const day    = parseInt(document.getElementById('visitorDay').value);
+    const hourVal = document.getElementById('visitorHour').value;
+    const minuteVal = document.getElementById('visitorMinute').value;
+    const hour   = hourVal !== '' ? parseInt(hourVal) : 12;
+    const minute = minuteVal !== '' ? parseInt(minuteVal) : 0;
+
+    if (!name) return showToast('이름이나 닉네임 적어라 임마! 🌙');
+    if (!gender) return showToast('성별 골라야 될 거 아이가! ✨');
+    if (!year) return showToast('태어난 년도 골라라!');
+    if (!month) return showToast('몇 월에 태어났노? 월 골라라!');
+    if (!day) return showToast('며칠에 태어났는지 일 골라라!');
+
+    showLoading(true, '니랑 사주 기운 억수로 뜯어보는 중이다...');
+
+    try {
+      const res = await fetch(`/api/maps/${mapId}/visit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, gender, birth_year: year, birth_month: month, birth_day: day, birth_hour: hour, birth_minute: minute })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      // 결과 페이지로 이동
+      window.location.href = `/result.html?mapId=${mapId}&visitorId=${data.visitorId}`;
+
+    } catch (err) {
+      showToast('에러 났다: ' + err.message);
+      showLoading(false);
+    }
+  }
+
+  // ── 대형 순위 스플래시 연출 ───────────────────────────
+  let splashTimer = null;
+  let currentHighlightId = null;
+
+  function showRankSplash(myRank, ownerName) {
+    currentHighlightId = myRank.id;
+
+    const overlay = document.getElementById('rankSplashOverlay');
+    const crownEl = document.getElementById('splashCrown');
+    const subtitleEl = document.getElementById('splashSubtitle');
+    const rankNumberEl = document.getElementById('splashRankNumber');
+    const badgeEl = document.getElementById('splashScoreBadge');
+    const msgEl = document.getElementById('splashMsg');
+
+    const crowns = { 1: '👑', 2: '🥈', 3: '🥉' };
+    crownEl.textContent = crowns[myRank.rank] || '🌟';
+    subtitleEl.textContent = `${escapeHtml(myRank.name)} 니 궁합 순위다!`;
+    rankNumberEl.textContent = `${myRank.rank}위`;
+    
+    const gradeLabels = { S: '천생연분이다 아이가! 🌟', A: '찰떡궁합이네! ✨', B: '그럭저럭 쏘쏘~ 🌙', C: '쫌 삐걱거리겠는데? ⚡', D: '와이라노... 전생에 웬수? 🌀' };
+    const grade = getGradeFromScore(myRank.score);
+    badgeEl.textContent = `${myRank.score}점 · ${gradeLabels[grade] || ''}`;
+
+    if (myRank.rank === 1) {
+      msgEl.innerHTML = `와 대박이다! <strong>${escapeHtml(ownerName)}</strong> 님이랑 궁합에서 <span style="color:var(--gold);">1등 왕좌</span> 먹었다! 🏆`;
+    } else if (myRank.rank <= 3) {
+      msgEl.innerHTML = `오~ 꽤 치네! <strong>${escapeHtml(ownerName)}</strong> 님이랑 궁합 TOP 3에 들었다! ✨`;
+    } else {
+      msgEl.innerHTML = `<strong>${escapeHtml(ownerName)}</strong> 님이랑 전체 순위표에서 <strong>${myRank.rank}위</strong> 찍었다! 🌌`;
+    }
+
+    // 오버레이 노출 및 팡파레 & 폭죽 실행
+    overlay.classList.add('show');
+    playFanfareSound();
+    runSplashConfetti();
+
+    // 2.6초 후 자동으로 닫히고 해당 위치로 스크롤
+    if (splashTimer) clearTimeout(splashTimer);
+    splashTimer = setTimeout(() => {
+      closeRankSplash();
+    }, 2600);
+  }
+
+  function closeRankSplash() {
+    if (splashTimer) clearTimeout(splashTimer);
+    const overlay = document.getElementById('rankSplashOverlay');
+    overlay.classList.remove('show');
+
+    // 순위표 내 위치로 부드럽게 스크롤
+    if (currentHighlightId) {
+      scrollToRankRow(currentHighlightId);
+    }
+  }
+
+  function scrollToRankRow(id) {
+    setTimeout(() => {
+      const targetRow = document.getElementById(`row-${id}`);
+      if (targetRow) {
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        const rankingCard = document.getElementById('rankingCard');
+        if (rankingCard) rankingCard.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 200);
+  }
+
+  // ── 영롱한 팡파레 효과음 (Web Audio API) ────────────────
+  function playFanfareSound() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      if (ctx.state === 'suspended') ctx.resume();
+
+      // C5 - E5 - G5 - C6 팡파레 코드
+      const freqs = [523.25, 659.25, 783.99, 1046.50];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.1);
+        
+        gain.gain.setValueAtTime(0.001, ctx.currentTime + idx * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + idx * 0.1 + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.1 + 0.7);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.1);
+        osc.stop(ctx.currentTime + idx * 0.1 + 0.75);
+      });
+    } catch (e) {
+      // 무시
+    }
+  }
+
+  // ── 폭죽 파티클 애니메이션 ─────────────────────────────
+  function runSplashConfetti() {
+    const canvas = document.getElementById('rankSplashCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+    const colors = ['#FFD700', '#FFA500', '#C8A2FF', '#FF69B4', '#00E5FF', '#FFFFFF'];
+
+    for (let i = 0; i < 90; i++) {
+      particles.push({
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        vx: (Math.random() - 0.5) * 18,
+        vy: (Math.random() - 0.7) * 20,
+        size: Math.random() * 8 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rotation: Math.random() * 360,
+        vRot: (Math.random() - 0.5) * 12,
+        alpha: 1,
+        life: 0,
+        maxLife: Math.random() * 40 + 70
+      });
+    }
+
+    let animId;
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let alive = false;
+
+      particles.forEach(p => {
+        p.life++;
+        if (p.life < p.maxLife) {
+          alive = true;
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.35; // 중력
+          p.vx *= 0.98;
+          p.rotation += p.vRot;
+          p.alpha = Math.max(0, 1 - (p.life / p.maxLife));
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.alpha;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+          ctx.restore();
+        }
+      });
+
+      if (alive) {
+        animId = requestAnimationFrame(animate);
+      }
+    }
+
+    animate();
+  }
+
+  // ── 점수→등급 ─────────────────────────────────────────
+  function getGradeFromScore(score) {
+    if (score >= 90) return 'S';
+    if (score >= 75) return 'A';
+    if (score >= 60) return 'B';
+    if (score >= 45) return 'C';
+    return 'D';
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  initPage();
+</script>
+</body>
+</html>

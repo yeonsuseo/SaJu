@@ -1,0 +1,7 @@
+node_modules/
+server/node_modules/
+*.log
+*.tmp
+server/saju.db
+.DS_Store
+Thumbs.db

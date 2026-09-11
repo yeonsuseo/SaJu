@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사주 궁합 — 내 사주 Map 맹글기</title>
+  <meta name="description" content="니 사주 Map 맹글어서 링크 뿌리봐라! 친구들이랑 궁합 까보는 사이트다.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- 배경 -->
+<canvas id="stars-canvas"></canvas>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="bg-orb bg-orb-3"></div>
+
+<!-- 로딩 -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div>
+    <div class="spinner"></div>
+    <div class="loading-inner" id="loadingText">사주 기운 억수로 뜯어보는 중이다...</div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<div class="container">
+  <!-- 헤더 -->
+  <header class="site-header fade-in">
+    <div class="site-logo">🌌 사주 궁합</div>
+    <div class="site-subtitle">니 사주 Map 맹글어서 링크 뿌리봐라! 궁합 함 까보자</div>
+  </header>
+
+  <!-- Step 1: 내 정보 입력 -->
+  <div class="card fade-in" id="step1Card" style="animation-delay:0.1s">
+    <div class="card-title">
+      <span class="icon">🌙</span>
+      니 사주 정보 함 넣어봐라
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">이름이나 닉네임 적어라 <span>*</span></label>
+      <input type="text" id="ownerName" class="form-input" placeholder="예: 서연수" maxlength="20">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">성별 골라봐라 <span>*</span></label>
+      <div class="gender-row">
+        <button class="gender-btn" data-gender="남" onclick="selectGender(this)">♂ 머스마</button>
+        <button class="gender-btn" data-gender="여" onclick="selectGender(this)">♀ 가시나</button>
+      </div>
+      <input type="hidden" id="ownerGender" value="">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">생년월일 골라봐라 <span>*</span></label>
+      <div class="date-row">
+        <select id="ownerYear" class="form-input">
+          <option value="">년도 선택</option>
+        </select>
+        <select id="ownerMonth" class="form-input">
+          <option value="">월 선택</option>
+          <option value="1">1월</option><option value="2">2월</option>
+          <option value="3">3월</option><option value="4">4월</option>
+          <option value="5">5월</option><option value="6">6월</option>
+          <option value="7">7월</option><option value="8">8월</option>
+          <option value="9">9월</option><option value="10">10월</option>
+          <option value="11">11월</option><option value="12">12월</option>
+        </select>
+        <select id="ownerDay" class="form-input">
+          <option value="">일 선택</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">태어난 시간 <span style="color:var(--text-muted);font-size:0.8rem;">(모르면 걍 비워둬라)</span></label>
+      <div class="time-row">
+        <select id="ownerHour" class="form-input">
+          <option value="">시 모름 (패스)</option>
+          <option value="23">자시 (23:00~00:59 / 쥐)</option>
+          <option value="1">축시 (01:00~02:59 / 소)</option>
+          <option value="3">인시 (03:00~04:59 / 호랭이)</option>
+          <option value="5">묘시 (05:00~06:59 / 토끼)</option>
+          <option value="7">진시 (07:00~08:59 / 용)</option>
+          <option value="9">사시 (09:00~10:59 / 뱀)</option>
+          <option value="11">오시 (11:00~12:59 / 말)</option>
+          <option value="13">미시 (13:00~14:59 / 양)</option>
+          <option value="15">신시 (15:00~16:59 / 원숭이)</option>
+          <option value="17">유시 (17:00~18:59 / 닭)</option>
+          <option value="19">술시 (19:00~20:59 / 개)</option>
+          <option value="21">해시 (21:00~22:59 / 돼지)</option>
+        </select>
+        <select id="ownerMinute" class="form-input">
+          <option value="">분 선택 (0~59분)</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:28px;">
+      <button class="btn btn-primary" onclick="createMap()">
+        ✨ 내 사주 Map 퍼뜩 맹글기
+      </button>
+    </div>
+  </div>
+
+  <!-- Step 2: 완료 & 링크 공유 (숨김) -->
+  <div class="card fade-in" id="step2Card" style="display:none;">
+    <div class="card-title">
+      <span class="icon">🎉</span>
+      니 사주 Map 뙇 완성됐다!
+    </div>
+
+    <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:20px; line-height:1.7;">
+      밑에 링크 복사해가 단톡방이나 인스타에 싹 뿌려봐라.<br>
+      링크 타고 들어온 놈들이 지 사주 넣으면 니랑 몇 점인지 바로 까발려준다!
+    </p>
+
+    <!-- 생성된 사주 미리보기 -->
+    <div id="sajuPreview" style="margin-bottom:20px;"></div>
+
+    <label class="form-label">공유할 링크다</label>
+    <div class="share-box">
+      <input type="text" id="shareUrl" class="share-input" readonly>
+      <button class="btn-copy" id="copyBtn" onclick="copyLink()">링크 복사</button>
+    </div>
+
+    <div style="margin-top:20px;">
+      <button class="btn btn-gold" onclick="goToMyMap()" style="width:100%; font-size:1.05rem;">
+        내 Map 보러 가기 (순위표 확인) →
+      </button>
+    </div>
+  </div>
+
+  <!-- 안내 섹션 -->
+  <div class="card fade-in" id="howtoCard" style="animation-delay:0.2s; margin-top:24px;">
+    <div class="card-title">
+      <span class="icon">✦</span>
+      요래 쓰는기다
+    </div>
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <div style="display:flex; gap:14px; align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--lavender-dim);border:1px solid var(--lavender);display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:var(--lavender);flex-shrink:0;margin-top:2px;">1</div>
+        <div>
+          <div style="font-size:0.9rem;color:var(--text-primary);margin-bottom:3px;font-weight:600;">내 사주 Map 맹글기</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);">위에서 니 정보 입력하면 니 전용 고유 링크가 하나 뙇 생성된다.</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:14px; align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--lavender-dim);border:1px solid var(--lavender);display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:var(--lavender);flex-shrink:0;margin-top:2px;">2</div>
+        <div>
+          <div style="font-size:0.9rem;color:var(--text-primary);margin-bottom:3px;font-weight:600;">링크 카톡으로 뿌리기</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);">카톡이나 인스타 스토리에 링크 복사해가 아들한테 던져줘라.</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:14px; align-items:flex-start;">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--lavender-dim);border:1px solid var(--lavender);display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:var(--lavender);flex-shrink:0;margin-top:2px;">3</div>
+        <div>
+          <div style="font-size:0.9rem;color:var(--text-primary);margin-bottom:3px;font-weight:600;">순위표 까보기</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);">아들이 사주 넣으면 니랑 궁합 점수 매겨져서 순위표에 쫙 뜬다!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/saju.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  let selectedGender = '';
+  let createdMapId = '';
+
+  // ── 생년월일 콤보박스 옵션 채우기 ──────────────────────
+  function initDateSelects() {
+    const yearSelect = document.getElementById('ownerYear');
+    const daySelect  = document.getElementById('ownerDay');
+
+    // 년도 (2024년부터 1940년까지 역순)
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear; y >= 1940; y--) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = `${y}년`;
+      if (y === 1998) opt.selected = true; // 기본값
+      yearSelect.appendChild(opt);
+    }
+
+    // 일 (1일부터 31일까지)
+    for (let d = 1; d <= 31; d++) {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = `${d}일`;
+      if (d === 15) opt.selected = true; // 기본값
+      daySelect.appendChild(opt);
+    }
+
+    // 분 (0분부터 59분까지 1분 단위)
+    const minSelect = document.getElementById('ownerMinute');
+    for (let m = 0; m < 60; m++) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = `${m}분`;
+      minSelect.appendChild(opt);
+    }
+  }
+
+  initDateSelects();
+
+  function selectGender(btn) {
+    document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedGender = btn.dataset.gender;
+    document.getElementById('ownerGender').value = selectedGender;
+  }
+
+  async function createMap() {
+    const name   = document.getElementById('ownerName').value.trim();
+    const gender = selectedGender;
+    const year   = parseInt(document.getElementById('ownerYear').value);
+    const month  = parseInt(document.getElementById('ownerMonth').value);
+    const day    = parseInt(document.getElementById('ownerDay').value);
+    const hourVal = document.getElementById('ownerHour').value;
+    const minuteVal = document.getElementById('ownerMinute').value;
+    const hour   = hourVal !== '' ? parseInt(hourVal) : 12;
+    const minute = minuteVal !== '' ? parseInt(minuteVal) : 0;
+
+    if (!name) return showToast('이름이나 닉네임 적어라 임마! 🌙');
+    if (!gender) return showToast('성별 골라야 될 거 아이가! ✨');
+    if (!year) return showToast('태어난 년도 골라라!');
+    if (!month) return showToast('몇 월에 태어났노? 월 골라라!');
+    if (!day) return showToast('며칠에 태어났는지 일 골라라!');
+
+    showLoading(true, '니 사주 기운 억수로 뜯어보는 중이다...');
+
+    try {
+      const res = await fetch('/api/maps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, gender, birth_year: year, birth_month: month, birth_day: day, birth_hour: hour, birth_minute: minute })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      createdMapId = data.mapId;
+      const baseUrl = (externalTunnelUrl && window.location.hostname === 'localhost') ? externalTunnelUrl : window.location.origin;
+      const fullUrl = `${baseUrl}/map.html?id=${data.mapId}`;
+
+      // 사주 미리보기 렌더링
+      const saju = calcSaju({ year, month, day, hour, minute });
+      document.getElementById('sajuPreview').innerHTML = renderSajuPillars(saju);
+
+      document.getElementById('shareUrl').value = fullUrl;
+      document.getElementById('step1Card').style.display = 'none';
+      document.getElementById('howtoCard').style.display = 'none';
+      document.getElementById('step2Card').style.display = 'block';
+      document.getElementById('step2Card').classList.add('slide-up');
+
+    } catch (err) {
+      showToast('에러 났다: ' + err.message);
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // ── 외부 터널 주소 감지 ────────────────────────────────
+  let externalTunnelUrl = null;
+
+  async function checkTunnelInfo() {
+    try {
+      const res = await fetch('/api/system/info');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.tunnelUrl) {
+          externalTunnelUrl = data.tunnelUrl;
+          renderTunnelNotice(data.tunnelUrl);
+        }
+      }
+    } catch (e) {}
+  }
+
+  function renderTunnelNotice(url) {
+    if (window.location.hostname === 'localhost') {
+      const header = document.querySelector('.site-header');
+      if (header && !document.getElementById('tunnelNoticeBadge')) {
+        const badge = document.createElement('div');
+        badge.id = 'tunnelNoticeBadge';
+        badge.style.cssText = 'margin:12px auto 0; display:inline-flex; align-items:center; gap:8px; background:rgba(34,197,94,0.12); border:1px solid #4ADE80; color:#4ADE80; font-size:0.82rem; padding:6px 16px; border-radius:20px;';
+        badge.innerHTML = `<span>🌐 외부 공유 링크 가동 중!</span> <a href="${url}" target="_blank" style="color:#FFD700; text-decoration:underline;">외부링크로 열기</a>`;
+        header.appendChild(badge);
+      }
+    }
+  }
+
+  // 주기적으로 터널 URL 확인 (서버 켜진 직후 생성 대기)
+  checkTunnelInfo();
+  setInterval(checkTunnelInfo, 4000);
+
+  function copyLink() {
+    const url = document.getElementById('shareUrl').value;
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ 복사 완!';
+      btn.classList.add('copied');
+      showToast('링크 복사됐다! 단톡방에 싹 뿌리봐라 🌟');
+      setTimeout(() => {
+        btn.textContent = '링크 복사';
+        btn.classList.remove('copied');
+      }, 2000);
+    }).catch(() => {
+      prompt('요 링크 복사해가라:', url);
+    });
+  }
+
+  function goToMyMap() {
+    window.location.href = `/map.html?id=${createdMapId}`;
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>궁합 결과 나왔다!</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="bg-orb bg-orb-3"></div>
+
+<div class="toast" id="toast"></div>
+
+<div class="container">
+
+  <div id="pageLoading" style="text-align:center; padding:100px 0;">
+    <div class="spinner"></div>
+    <p style="color:var(--text-muted);margin-top:16px;font-size:0.9rem;">궁합 결과 뽑아내는 중이다, 쫌만 기달리라...</p>
+  </div>
+
+  <div id="resultContent" style="display:none;">
+
+    <!-- 헤더 -->
+    <header class="site-header" style="padding-bottom:24px;">
+      <div class="site-logo">🌌 사주 궁합</div>
+      <div class="site-subtitle">니랑 내랑 궁합 결과 나왔다! 함 봐라!</div>
+    </header>
+
+    <!-- 두 사람 비교 -->
+    <div class="card fade-in" style="padding:24px;">
+      <div class="compare-wrap">
+        <div class="compare-person">
+          <div class="compare-label">Map 쥔장</div>
+          <div class="compare-name" id="ownerNameResult"></div>
+          <div style="font-size:0.75rem; color:var(--text-muted);" id="ownerDayGanResult"></div>
+        </div>
+        <div class="compare-vs">♡</div>
+        <div class="compare-person">
+          <div class="compare-label">찾아온 놈</div>
+          <div class="compare-name" id="visitorNameResult"></div>
+          <div style="font-size:0.75rem; color:var(--text-muted);" id="visitorDayGanResult"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 점수 링 + 등급 -->
+    <div class="card fade-in" style="animation-delay:0.1s; margin-top:20px;">
+      <div class="score-ring-wrap" id="scoreRingWrap">
+        <svg class="score-ring" viewBox="0 0 160 160">
+          <defs>
+            <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#C8A2FF"/>
+              <stop offset="100%" stop-color="#FFD700"/>
+            </linearGradient>
+          </defs>
+          <circle class="score-ring-bg" cx="80" cy="80" r="65"/>
+          <circle class="score-ring-fill" id="scoreRingFill" cx="80" cy="80" r="65"/>
+        </svg>
+        <div class="score-ring-text">
+          <div class="score-ring-number" id="scoreNumber">0</div>
+          <div class="score-ring-label">/ 100점 만점</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;">
+        <div class="grade-badge" id="gradeBadge"></div>
+        <div class="rank-display" id="rankDisplay"></div>
+      </div>
+
+      <!-- 한줄 요약 -->
+      <div class="summary-text" id="summaryText" style="margin-top:24px;"></div>
+
+      <!-- 직관적인 내 순위 바로가기 버튼 (대형) -->
+      <div style="margin-top:28px;">
+        <button class="btn-ranking-hero" onclick="goToMyRank()">
+          🏆 내 몇 등인지 순위표 보러가기 →
+        </button>
+      </div>
+    </div>
+
+    <!-- 궁합 장단점 심층 진단 -->
+    <div class="card fade-in" style="animation-delay:0.15s; margin-top:20px;">
+      <div class="card-title">
+        <span class="icon">⚖️</span>
+        궁합 심층 진단 (잘 맞는 점 & 안 맞는 점)
+      </div>
+      <p style="font-size:0.88rem; color:var(--text-secondary); margin-bottom:16px;">
+        니랑 내랑 사주 기운이 맞부딪히면서 나오는 찰떡 케미랑 갈등 포인트다.
+      </p>
+
+      <div class="pros-cons-grid">
+        <div class="pro-con-box pros-box">
+          <div class="pro-con-title">
+            <span>✨</span> 니랑 내랑 잘 맞는 점 (장점)
+          </div>
+          <ul class="pro-con-list" id="prosList"></ul>
+        </div>
+        <div class="pro-con-box cons-box">
+          <div class="pro-con-title">
+            <span>⚠️</span> 조심해야 할 점 (단점)
+          </div>
+          <ul class="pro-con-list" id="consList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 상세 분석 -->
+    <div class="card fade-in" style="animation-delay:0.2s; margin-top:20px;">
+      <div class="card-title">
+        <span class="icon">🔮</span>
+        디테일 분석 (하나씩 뜯어보기)
+      </div>
+
+      <!-- 1. 일간 천간 -->
+      <div class="detail-card" id="detailDayGan"></div>
+
+      <!-- 2. 오행 조화 -->
+      <div class="detail-card" id="detailElement"></div>
+
+      <!-- 3. 지지 합충 -->
+      <div class="detail-card" id="detailBranch"></div>
+
+      <!-- 4. 음양 균형 -->
+      <div class="detail-card" id="detailYinYang"></div>
+    </div>
+
+    <!-- 두 사람의 四柱 비교 -->
+    <div class="card fade-in" style="animation-delay:0.3s; margin-top:20px;">
+      <div class="card-title">
+        <span class="icon">✦</span>
+        니랑 내 사주 기둥 4개 비교
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;" id="ownerPillarLabel"></div>
+        <div id="ownerPillarsResult" class="saju-pillars"></div>
+      </div>
+      <div class="divider"></div>
+      <div>
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;" id="visitorPillarLabel"></div>
+        <div id="visitorPillarsResult" class="saju-pillars"></div>
+      </div>
+    </div>
+
+    <!-- 액션 버튼들 -->
+    <div style="margin-top:24px; display:flex; flex-direction:column; gap:12px;">
+      <button class="btn btn-gold" onclick="goToMyRank()" style="font-size:1.05rem; padding:16px;">
+        🏆 전체 순위표에서 내 순위 보기
+      </button>
+      <button class="btn btn-outline" onclick="shareResult()">
+        🔗 이 결과 링크 복사해가기
+      </button>
+      <button class="btn btn-outline" id="backToMapBtn" onclick="goBackToMap()">
+        ← Map 메인으로 돌아가기
+      </button>
+      <a href="/" class="btn btn-outline" style="text-align:center;">
+        🌌 나도 내 사주 Map 맹글어보기
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script src="/js/saju.js"></script>
+<script src="/js/app.js"></script>
+<script>
+  let mapId = '';
+  let visitorId = '';
+  let resultData = null;
+  let mapData = null;
+
+  // ── 페이지 초기화 ─────────────────────────────────────
+  async function initResultPage() {
+    const params = new URLSearchParams(window.location.search);
+    mapId = params.get('mapId');
+    visitorId = params.get('visitorId');
+
+    if (!mapId || !visitorId) {
+      window.location.href = '/';
+      return;
+    }
+
+    try {
+      const [mapRes, visitorRes] = await Promise.all([
+        fetch(`/api/maps/${mapId}`),
+        fetch(`/api/visitors/${visitorId}`)
+      ]);
+
+      if (!mapRes.ok || !visitorRes.ok) throw new Error('데이터 로딩 실패');
+
+      mapData    = await mapRes.json();
+      resultData = await visitorRes.json();
+
+      renderResult(mapData, resultData);
+
+      document.getElementById('pageLoading').style.display = 'none';
+      document.getElementById('resultContent').style.display = 'block';
+
+      // 애니메이션 시작
+      setTimeout(() => animateScore(resultData.score, resultData.detail), 300);
+
+    } catch (err) {
+      window.location.href = `/map.html?id=${mapId}`;
+    }
+  }
+
+  // ── 결과 렌더링 ───────────────────────────────────────
+  function renderResult(mapInfo, visitor) {
+    const owner = mapInfo.map;
+    const rankings = mapInfo.rankings;
+    const myRank = rankings.findIndex(r => r.id === visitorId) + 1;
+
+    // 두 사람 이름
+    const ownerGenderStr = owner.gender === '남' ? '머스마' : '가시나';
+    const visitorGenderStr = visitor.gender === '남' ? '머스마' : '가시나';
+    document.getElementById('ownerNameResult').textContent = `${owner.name} (${ownerGenderStr})`;
+    document.getElementById('visitorNameResult').textContent = `${visitor.name} (${visitorGenderStr})`;
+
+    // 일간 표시
+    const ownerDay = owner.saju_json.dayPillar;
+    const visitorDay = visitor.saju_json.dayPillar;
+    document.getElementById('ownerDayGanResult').textContent =
+      `일간: ${ownerDay.ganji} ${ownerDay.element}`;
+    document.getElementById('visitorDayGanResult').textContent =
+      `일간: ${visitorDay.ganji} ${visitorDay.element}`;
+
+    // 등급 뱃지
+    const grade = visitor.grade;
+    const gradeLabels = {
+      S: '🌟 천생연분이다 아이가!',
+      A: '✨ 찰떡궁합이네!',
+      B: '🌙 그럭저럭 살만하다',
+      C: '⚡ 쫌 삐걱거리겠는데?',
+      D: '🌀 전생에 웬수였나 ㄷㄷ'
+    };
+    const gradeBadge = document.getElementById('gradeBadge');
+    gradeBadge.textContent = gradeLabels[grade] || visitor.grade;
+    gradeBadge.className = `grade-badge grade-${grade}`;
+
+    // 순위
+    document.getElementById('rankDisplay').innerHTML =
+      rankings.length > 0
+        ? `전체 <strong>${myRank}등</strong> 묵었다! (총 ${rankings.length}명 중에)`
+        : '니가 1빠따로 궁합 봤다!';
+
+    // 한줄 요약
+    document.getElementById('summaryText').textContent = visitor.summary;
+
+    // 사주 비교
+    document.getElementById('ownerPillarLabel').textContent = `${owner.name}의 사주 기둥`;
+    document.getElementById('visitorPillarLabel').textContent = `${visitor.name}의 사주 기둥`;
+    document.getElementById('ownerPillarsResult').innerHTML = renderSajuPillars(owner.saju_json);
+    document.getElementById('visitorPillarsResult').innerHTML = renderSajuPillars(visitor.saju_json);
+
+    // 장단점 렌더링
+    renderProsCons(visitor);
+
+    // 상세 분석 카드들
+    renderDetailCards(visitor.detail_json, visitor.score);
+
+    // 페이지 타이틀
+    document.title = `${visitor.name} × ${owner.name} 궁합 — ${visitor.score}점 나왔다!`;
+  }
+
+  // ── 종합 장단점 렌더링 ─────────────────────────────────
+  function renderProsCons(visitor) {
+    const detail = visitor.detail_json || {};
+    const pros = visitor.pros || detail.pros || [];
+    const cons = visitor.cons || detail.cons || [];
+
+    const defaultPros = [
+      '둘이 기운이 오묘하게 잘 맞아떨어져서 보면 볼수록 호감이 간다.',
+      '서로 부족한 오행 기운을 찰떡같이 채워줄 수 있는 상호보완 관계다.',
+      '같이 있으면 시간 가는 줄 모르고 편안하고 즐겁다.'
+    ];
+
+    const defaultCons = [
+      '성격이나 일 처리 방식이 달라서 가끔 욱하거나 삐질 수 있다.',
+      '서운한 거 생기면 속으로 삭히지 말고 솔직하게 바로 털어놔야 된다.',
+      '니 고집만 부리지 말고 상대방 입장도 함 더 생각해봐라.'
+    ];
+
+    const displayPros = (pros && pros.length > 0) ? pros : defaultPros;
+    const displayCons = (cons && cons.length > 0) ? cons : defaultCons;
+
+    document.getElementById('prosList').innerHTML = displayPros
+      .map(p => `<li class="pro-con-item">${escapeHtml(p)}</li>`)
+      .join('');
+
+    document.getElementById('consList').innerHTML = displayCons
+      .map(c => `<li class="pro-con-item">${escapeHtml(c)}</li>`)
+      .join('');
+  }
+
+  // ── 상세 분석 카드 ─────────────────────────────────────
+  function renderDetailCards(detail, totalScore) {
+    // 1. 일간 천간
+    const dayPros = (detail.dayGan.pros && detail.dayGan.pros.length > 0)
+      ? `<div class="sub-pros-cons">
+           <div class="sub-pro-tag">✓ ${escapeHtml(detail.dayGan.pros[0])}</div>
+           ${detail.dayGan.cons && detail.dayGan.cons[0] ? `<div class="sub-con-tag">! ${escapeHtml(detail.dayGan.cons[0])}</div>` : ''}
+         </div>`
+      : '';
+
+    document.getElementById('detailDayGan').innerHTML = `
+      <div class="detail-card-header">
+        <div class="detail-card-title">🌙 일간 정신적 케미</div>
+        <div style="font-size:0.85rem;color:var(--lavender);font-weight:600;">${detail.dayGan.score} / ${detail.dayGan.maxScore}점</div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:10px;">
+        <span class="info-chip">${detail.dayGan.ownerStem}</span>
+        <span style="color:var(--gold);">↔</span>
+        <span class="info-chip">${detail.dayGan.visitorStem}</span>
+        <span class="info-chip" style="margin-left:auto;color:var(--lavender);border-color:var(--lavender-dim);">${detail.dayGan.relation}</span>
+      </div>
+      <div class="detail-score-bar-wrap">
+        <div class="detail-score-bar">
+          <div class="detail-score-bar-fill" data-pct="${(detail.dayGan.score/detail.dayGan.maxScore)*100}"></div>
+        </div>
+      </div>
+      <div class="detail-desc">${detail.dayGan.desc}</div>
+      ${dayPros}`;
+
+    // 2. 오행 조화
+    const elemNames = ['목(木)','화(火)','토(土)','금(金)','수(水)'];
+    const elemColors = ['el-0','el-1','el-2','el-3','el-4'];
+    const maxElem = Math.max(...detail.element.combined);
+    const elemBars = elemNames.map((name, i) => `
+      <div class="element-bar-row">
+        <div class="element-bar-label">${name}</div>
+        <div class="element-bar-track">
+          <div class="element-bar-fill ${elemColors[i]}" data-pct="${maxElem > 0 ? (detail.element.combined[i]/maxElem)*100 : 0}"></div>
+        </div>
+        <div class="element-bar-count">${detail.element.combined[i]}</div>
+      </div>`).join('');
+
+    const elemPros = (detail.element.pros && detail.element.pros.length > 0)
+      ? `<div class="sub-pros-cons">
+           <div class="sub-pro-tag">✓ ${escapeHtml(detail.element.pros[0])}</div>
+           ${detail.element.cons && detail.element.cons[0] ? `<div class="sub-con-tag">! ${escapeHtml(detail.element.cons[0])}</div>` : ''}
+         </div>`
+      : '';
+
+    document.getElementById('detailElement').innerHTML = `
+      <div class="detail-card-header">
+        <div class="detail-card-title">🔥 오행 기운 조화 (목화토금수)</div>
+        <div style="font-size:0.85rem;color:var(--lavender);font-weight:600;">${detail.element.score} / ${detail.element.maxScore}점</div>
+      </div>
+      <div class="element-bars">${elemBars}</div>
+      <div class="detail-score-bar-wrap">
+        <div class="detail-score-bar">
+          <div class="detail-score-bar-fill" data-pct="${(detail.element.score/detail.element.maxScore)*100}"></div>
+        </div>
+      </div>
+      <div class="detail-desc">${detail.element.desc}</div>
+      ${elemPros}`;
+
+    // 3. 지지 합충
+    const eventHtml = detail.branch.events && detail.branch.events.length > 0
+      ? detail.branch.events.map(e =>
+          `<span class="info-chip" style="${e.score > 0 ? 'color:var(--gold);border-color:var(--gold-dim);' : 'color:#FF8888;border-color:rgba(255,100,100,0.2);'}">${e.type} ${e.score > 0 ? '+' : ''}${e.score}</span>`
+        ).join('')
+      : '<span class="info-chip">딱히 합충 없음</span>';
+
+    const branchPros = (detail.branch.pros && detail.branch.pros.length > 0)
+      ? `<div class="sub-pros-cons">
+           <div class="sub-pro-tag">✓ ${escapeHtml(detail.branch.pros[0])}</div>
+           ${detail.branch.cons && detail.branch.cons[0] ? `<div class="sub-con-tag">! ${escapeHtml(detail.branch.cons[0])}</div>` : ''}
+         </div>`
+      : '';
+
+    document.getElementById('detailBranch').innerHTML = `
+      <div class="detail-card-header">
+        <div class="detail-card-title">⚡ 지지 현실 케미 (합치나 부딪히나)</div>
+        <div style="font-size:0.85rem;color:var(--lavender);font-weight:600;">${detail.branch.score} / ${detail.branch.maxScore}점</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">${eventHtml}</div>
+      <div class="detail-score-bar-wrap">
+        <div class="detail-score-bar">
+          <div class="detail-score-bar-fill" data-pct="${(detail.branch.score/detail.branch.maxScore)*100}"></div>
+        </div>
+      </div>
+      <div class="detail-desc">${detail.branch.desc}</div>
+      ${branchPros}`;
+
+    // 4. 음양 균형
+    const yangPct = detail.yinYang.totalYang / 16 * 100;
+    const yyPros = (detail.yinYang.pros && detail.yinYang.pros.length > 0)
+      ? `<div class="sub-pros-cons">
+           <div class="sub-pro-tag">✓ ${escapeHtml(detail.yinYang.pros[0])}</div>
+           ${detail.yinYang.cons && detail.yinYang.cons[0] ? `<div class="sub-con-tag">! ${escapeHtml(detail.yinYang.cons[0])}</div>` : ''}
+         </div>`
+      : '';
+
+    document.getElementById('detailYinYang').innerHTML = `
+      <div class="detail-card-header">
+        <div class="detail-card-title">☯ 음양 기운 밸런스</div>
+        <div style="font-size:0.85rem;color:var(--lavender);font-weight:600;">${detail.yinYang.score} / ${detail.yinYang.maxScore}점</div>
+      </div>
+      <div style="display:flex;gap:16px;margin-bottom:10px;font-size:0.85rem;">
+        <div>양(陽): <span style="color:var(--gold);font-weight:600;">${detail.yinYang.totalYang}</span></div>
+        <div>음(陰): <span style="color:var(--lavender);font-weight:600;">${detail.yinYang.totalYin}</span></div>
+      </div>
+      <div style="height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;margin-bottom:10px;">
+        <div style="height:100%;width:${yangPct}%;background:linear-gradient(90deg,#FFD700,#C8A2FF);border-radius:4px;transition:width 1.2s ease;"></div>
+      </div>
+      <div class="detail-score-bar-wrap">
+        <div class="detail-score-bar">
+          <div class="detail-score-bar-fill" data-pct="${(detail.yinYang.score/detail.yinYang.maxScore)*100}"></div>
+        </div>
+      </div>
+      <div class="detail-desc">${detail.yinYang.desc}</div>
+      ${yyPros}`;
+  }
+
+  // ── 점수 애니메이션 ───────────────────────────────────
+  function animateScore(targetScore, detail) {
+    let current = 0;
+    const el = document.getElementById('scoreNumber');
+    const step = Math.ceil(targetScore / 50);
+    const interval = setInterval(() => {
+      current = Math.min(current + step, targetScore);
+      el.textContent = current;
+      if (current >= targetScore) clearInterval(interval);
+    }, 25);
+
+    // 링 채우기
+    const circumference = 2 * Math.PI * 65;
+    const fill = document.getElementById('scoreRingFill');
+    const offset = circumference - (targetScore / 100) * circumference;
+    setTimeout(() => {
+      fill.style.strokeDashoffset = offset;
+    }, 100);
+
+    // 진행바 채우기
+    setTimeout(() => {
+      document.querySelectorAll('.detail-score-bar-fill').forEach(bar => {
+        bar.style.width = bar.dataset.pct + '%';
+      });
+      document.querySelectorAll('.element-bar-fill').forEach(bar => {
+        bar.style.width = bar.dataset.pct + '%';
+      });
+    }, 400);
+  }
+
+  // ── 액션 ─────────────────────────────────────────────
+  let externalTunnelUrl = null;
+  fetch('/api/system/info').then(r => r.json()).then(d => { if (d.tunnelUrl) externalTunnelUrl = d.tunnelUrl; }).catch(()=>{});
+
+  function goToMyRank() {
+    window.location.href = `/map.html?id=${mapId}&highlight=${visitorId}#rankingCard`;
+  }
+
+  function goBackToMap() {
+    window.location.href = `/map.html?id=${mapId}`;
+  }
+
+  function shareResult() {
+    let url = window.location.href;
+    if (externalTunnelUrl && window.location.hostname === 'localhost') {
+      url = url.replace(window.location.origin, externalTunnelUrl);
+    }
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('결과 링크 복사됐다! 친구한테 던져줘라 🌟');
+    }).catch(() => {
+      prompt('요 링크 복사해가라:', url);
+    });
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  initResultPage();
+</script>
+</body>
+</html>

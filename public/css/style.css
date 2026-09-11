@@ -1504,3 +1504,76 @@ tr.highlight-my-rank {
   transform: translateY(-2px);
   box-shadow: 0 6px 24px rgba(255, 215, 0, 0.25);
 }
+/* ══════════════════════════════════════════════════════════
+   Map 화면 링크 복사 & 공유 바 스타일
+   ══════════════════════════════════════════════════════════ */
+
+.map-share-bar {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(200, 162, 255, 0.08));
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  animation: fadeIn 0.4s ease;
+}
+
+.map-share-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.map-share-info .share-icon {
+  font-size: 1.3rem;
+  animation: shareBounce 2s infinite ease-in-out;
+}
+
+.map-share-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-sm {
+  padding: 8px 18px !important;
+  font-size: 0.88rem !important;
+  border-radius: 20px !important;
+  white-space: nowrap;
+}
+
+.btn-copy-done {
+  background: #22c55e !important;
+  color: #fff !important;
+  border-color: #22c55e !important;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.5) !important;
+}
+
+@keyframes shareBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@media (max-width: 600px) {
+  .map-share-bar {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+  .map-share-info {
+    justify-content: center;
+  }
+  .map-share-actions {
+    justify-content: center;
+  }
+  .map-share-actions .btn {
+    flex: 1;
+  }
+}

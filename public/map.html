@@ -81,6 +81,22 @@
       </div>
     </div>
 
+    <!-- 🔗 Map 링크 복사 & 공유 바 -->
+    <div class="map-share-bar">
+      <div class="map-share-info">
+        <span class="share-icon">📢</span>
+        <span><strong>친구들한테 이 Map 링크 뿌려봐라!</strong> 사주 넣으면 궁합 순위표에 쫙 뜬다</span>
+      </div>
+      <div class="map-share-actions">
+        <button class="btn btn-gold btn-sm" id="mapCopyBtn" onclick="copyMapUrl()">
+          <span id="copyIcon">🔗</span> <span id="copyText">링크 복사</span>
+        </button>
+        <button class="btn btn-outline btn-sm" id="nativeShareBtn" onclick="shareMapNative()" style="display:none;">
+          <span>💬 공유하기</span>
+        </button>
+      </div>
+    </div>
+
     <!-- 소유자 사주 四柱 -->
     <div class="card fade-in" style="animation-delay:0.1s; margin-top:20px;">
       <div class="card-title">
@@ -178,6 +194,13 @@
           <p>아직 아무도 궁합 안 봤다 ㅋ<br>니가 1빠따로 함 까봐라!</p>
         </div>
       </div>
+
+      <!-- 순위표 내 공유 버튼 -->
+      <div style="margin-top:24px; text-align:center;">
+        <button class="btn btn-gold" onclick="copyMapUrl()" style="display:inline-flex; width:auto; padding:12px 28px; font-size:0.95rem;">
+          🔗 이 Map 링크 복사해서 친구들 소환하기
+        </button>
+      </div>
     </div>
 
     <!-- 📜 방장의 4대 사주풀이 (성향·연애·과거·미래 - 누구나 열람 가능) -->
@@ -267,6 +290,9 @@
 
       document.getElementById('pageLoading').style.display = 'none';
       document.getElementById('mainContent').style.display = 'block';
+
+      // 모바일 공유 버튼 활성화 확인
+      checkNativeShareSupport();
 
       // 페이지 타이틀 업데이트
       document.title = `${data.map.name}의 사주 궁합 Map이다!`;
@@ -683,6 +709,85 @@
       <p class="reading-text-p">${formattedContent}</p>
       <div class="reading-tags-wrap">${tagsHtml}</div>
     `;
+  }
+
+  // ── 🔗 Map 링크 복사 및 모바일 공유 기능 ───────────────────────
+  function copyMapUrl() {
+    const url = window.location.origin + window.location.pathname + '?id=' + mapId;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(() => {
+        onCopySuccess();
+      }).catch(() => {
+        fallbackCopyText(url);
+      });
+    } else {
+      fallbackCopyText(url);
+    }
+  }
+
+  function onCopySuccess() {
+    const btn = document.getElementById('mapCopyBtn');
+    const copyText = document.getElementById('copyText');
+    const copyIcon = document.getElementById('copyIcon');
+
+    if (btn) {
+      btn.classList.add('btn-copy-done');
+      if (copyText) copyText.textContent = '복사 완료!';
+      if (copyIcon) copyIcon.textContent = '✓';
+    }
+
+    showToast('링크 복사됐다! 단톡방이나 인스타에 싹 뿌리봐라 🌟');
+
+    setTimeout(() => {
+      if (btn) {
+        btn.classList.remove('btn-copy-done');
+        if (copyText) copyText.textContent = '링크 복사';
+        if (copyIcon) copyIcon.textContent = '🔗';
+      }
+    }, 2500);
+  }
+
+  function fallbackCopyText(text) {
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.focus();
+    input.select();
+    try {
+      document.execCommand('copy');
+      onCopySuccess();
+    } catch (e) {
+      prompt('요 링크 복사해가라:', text);
+    }
+    document.body.removeChild(input);
+  }
+
+  // 모바일 Web Share API 연동 (카톡, 메시지 등 직접 공유)
+  function checkNativeShareSupport() {
+    if (navigator.share) {
+      const btn = document.getElementById('nativeShareBtn');
+      if (btn) btn.style.display = 'inline-flex';
+    }
+  }
+
+  async function shareMapNative() {
+    const url = window.location.origin + window.location.pathname + '?id=' + mapId;
+    const name = ownerData ? ownerData.name : '사주 궁합';
+    const title = `${name}의 사주 궁합 Map`;
+    const text = `${name}이랑 니랑 사주 궁합 몇 점인지 함 까보자! 🌌`;
+
+    try {
+      await navigator.share({
+        title: title,
+        text: text,
+        url: url
+      });
+    } catch (e) {
+      // 사용자가 공유 취소한 경우 무시
+    }
   }
 
   initPage();

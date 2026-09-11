@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -68,13 +68,17 @@ app.post('/api/maps', async (req, res) => {
   }
 });
 
-// GET /api/maps/:id — Map + 순위 조회 (일반 공개용, 비밀 사주풀이는 완벽 은폐)
+// GET /api/maps/:id — Map + 순위 + 사주풀이 조회 (모두가 열람 가능)
 app.get('/api/maps/:id', async (req, res) => {
   try {
     const map = await db.getMap(req.params.id);
     if (!map) return res.status(404).json({ error: '존재하지 않는 Map입니다.' });
 
-    // 보안 필터: 방장의 비밀 사주풀이 및 토큰을 완벽 제거하여 반환
+    // 4대 사주풀이 (모든 방문자가 재미있게 볼 수 있도록 제공)
+    const reading = (map.saju_json && map.saju_json._reading)
+      ? map.saju_json._reading
+      : calcOwnerReading(map.saju_json, map.gender, map.name);
+
     const safeSaju = { ...map.saju_json };
     delete safeSaju._owner_token;
     delete safeSaju._reading;
@@ -86,7 +90,7 @@ app.get('/api/maps/:id', async (req, res) => {
     ]);
     const rankedList = rankings.map((v, i) => ({ rank: i + 1, ...v }));
 
-    res.json({ map, rankings: rankedList, visitorCount });
+    res.json({ map, reading, rankings: rankedList, visitorCount });
   } catch (err) {
     console.error('Map 조회 오류:', err);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });

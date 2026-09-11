@@ -90,9 +90,6 @@
       <div id="ownerPillars" class="saju-pillars"></div>
     </div>
 
-    <!-- 👑 방장 본인 전용 비밀 사주풀이 호스트 (일반 방문자에게는 완전 숨김) -->
-    <div id="ownerSecretReadingHost"></div>
-
     <!-- 방문자 입력 폼 -->
     <div class="card fade-in" id="formCard" style="animation-delay:0.2s; margin-top:20px;">
       <div class="card-title">
@@ -183,6 +180,9 @@
       </div>
     </div>
 
+    <!-- 📜 방장의 4대 사주풀이 (성향·연애·과거·미래 - 누구나 열람 가능) -->
+    <div id="ownerReadingHost"></div>
+
     <!-- 내 Map 만들기 배너 -->
     <div class="card" style="margin-top:20px; text-align:center; padding:28px;">
       <p style="color:var(--text-secondary);font-size:0.95rem;margin-bottom:16px;">
@@ -260,8 +260,10 @@
       renderOwner(data.map);
       renderRankings(data.rankings, data.visitorCount, highlightId);
 
-      // 👑 방장 본인인지 비밀 토큰 검증 후 비밀 사주풀이 로드 (일반 친구에겐 미노출)
-      checkOwnerTokenAndRenderReading(mapId, data.map.name);
+      // 📜 방장의 4대 사주풀이 렌더링 (모두가 열람 가능)
+      if (data.reading) {
+        renderOwnerReadingCard(data.reading, data.map.name);
+      }
 
       document.getElementById('pageLoading').style.display = 'none';
       document.getElementById('mainContent').style.display = 'block';
@@ -569,46 +571,21 @@
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // ── 👑 방장 본인 전용 비밀 사주풀이 인증 및 렌더링 ───────────
+  // ── 📜 방장의 4대 사주풀이 렌더링 (모두가 열람 가능) ────────
   let mapReadingData = null;
 
-  async function checkOwnerTokenAndRenderReading(id, ownerName) {
-    const urlParams = new URLSearchParams(window.location.search);
-    let token = urlParams.get('token');
-    if (token) {
-      // URL로 전달된 방장 비밀 토큰을 로컬 브라우저에 저장하고 주소창을 깔끔하게 정리
-      localStorage.setItem('saju_owner_' + id, token);
-      const cleanUrl = window.location.pathname + '?id=' + id + (urlParams.get('highlight') ? '&highlight=' + urlParams.get('highlight') : '');
-      window.history.replaceState({}, document.title, cleanUrl);
-    } else {
-      token = localStorage.getItem('saju_owner_' + id);
-    }
-    if (!token) return; // 방장 토큰이 없으면 아무것도 렌더링 안 함 (완벽 은폐)
-
-    try {
-      const res = await fetch(`/api/maps/${id}/reading?token=${encodeURIComponent(token)}`);
-      if (!res.ok) return; // 토큰 불일치 시에도 은폐
-
-      const data = await res.json();
-      if (!data.reading) return;
-
-      mapReadingData = data.reading;
-      renderOwnerSecretAccordion(data.reading, ownerName);
-    } catch (e) {
-      // 오류 시 조용히 넘김
-    }
-  }
-
-  function renderOwnerSecretAccordion(reading, name) {
-    const host = document.getElementById('ownerSecretReadingHost');
+  function renderOwnerReadingCard(reading, name) {
+    const host = document.getElementById('ownerReadingHost');
     if (!host) return;
 
+    mapReadingData = reading;
+
     host.innerHTML = `
-      <div style="margin-top:20px;">
+      <div style="margin-top:24px;">
         <button class="owner-secret-toggle-btn" onclick="toggleOwnerReading()">
           <span style="display:flex; align-items:center; gap:8px;">
             <span>📜</span>
-            <span><strong>[방장 전용]</strong> ${escapeHtml(name)} 님의 4대 비밀 사주풀이</span>
+            <span><strong>${escapeHtml(name)}</strong> 님의 4대 사주풀이 (성향·연애·과거·미래)</span>
           </span>
           <span id="readingToggleIcon" style="font-size:0.85rem; color:var(--gold);">접기 ▲</span>
         </button>
@@ -625,8 +602,8 @@
                 </div>
               </div>
               <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <span class="secret-badge">👑 방장 비밀 열람</span>
-                <span class="secret-badge-privacy">🔒 타인 열람 불가</span>
+                <span class="secret-badge">✦ 방장 사주 분석</span>
+                <span class="secret-badge-privacy">👥 모두 열람 가능</span>
               </div>
             </div>
 
@@ -656,8 +633,8 @@
             </div>
 
             <div class="reading-privacy-alert">
-              <span>🤫</span>
-              <span><strong>안심하이소!</strong> 이 사주풀이는 오직 방장님 화면에만 표시되며, 공유 링크를 받은 친구들에게는 절대 보이지 않습니다.</span>
+              <span>💡</span>
+              <span><strong>방장 사주 까보기:</strong> 방장의 타고난 기운과 성향을 뜯어보고, 방장과의 궁합 점수랑 비교해보이소!</span>
             </div>
           </div>
         </div>

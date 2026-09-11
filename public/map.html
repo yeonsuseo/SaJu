@@ -573,7 +573,16 @@
   let mapReadingData = null;
 
   async function checkOwnerTokenAndRenderReading(id, ownerName) {
-    const token = localStorage.getItem('saju_owner_' + id);
+    const urlParams = new URLSearchParams(window.location.search);
+    let token = urlParams.get('token');
+    if (token) {
+      // URL로 전달된 방장 비밀 토큰을 로컬 브라우저에 저장하고 주소창을 깔끔하게 정리
+      localStorage.setItem('saju_owner_' + id, token);
+      const cleanUrl = window.location.pathname + '?id=' + id + (urlParams.get('highlight') ? '&highlight=' + urlParams.get('highlight') : '');
+      window.history.replaceState({}, document.title, cleanUrl);
+    } else {
+      token = localStorage.getItem('saju_owner_' + id);
+    }
     if (!token) return; // 방장 토큰이 없으면 아무것도 렌더링 안 함 (완벽 은폐)
 
     try {
@@ -601,10 +610,10 @@
             <span>📜</span>
             <span><strong>[방장 전용]</strong> ${escapeHtml(name)} 님의 4대 비밀 사주풀이</span>
           </span>
-          <span id="readingToggleIcon" style="font-size:0.85rem; color:var(--gold);">열어보기 ▼</span>
+          <span id="readingToggleIcon" style="font-size:0.85rem; color:var(--gold);">접기 ▲</span>
         </button>
 
-        <div id="ownerReadingBox" style="display:none; margin-top:12px;">
+        <div id="ownerReadingBox" style="display:block; margin-top:12px;">
           <div class="secret-reading-card" style="margin-top:0;">
             <div class="secret-reading-header">
               <div>

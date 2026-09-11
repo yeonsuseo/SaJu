@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const db      = require('./db');
@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // ════════════════════════════════════════════════════════════
 
 // POST /api/maps — Map 생성
-app.post('/api/maps', (req, res) => {
+app.post('/api/maps', async (req, res) => {
   try {
     const { name, gender, birth_year, birth_month, birth_day, birth_hour, birth_minute } = req.body;
 
@@ -28,46 +28,52 @@ app.post('/api/maps', (req, res) => {
 
     const saju = calcSaju({
       year: birth_year, month: birth_month, day: birth_day,
-      hour: birth_hour || 12, minute: birth_minute || 0
+      hour: birth_hour !== undefined ? birth_hour : 12,
+      minute: birth_minute !== undefined ? birth_minute : 0
     });
 
-    const mapId = db.createMap({
-      name, gender,
-      birth_year, birth_month, birth_day,
-      birth_hour:   birth_hour   || 12,
-      birth_minute: birth_minute || 0,
+    const mapId = await db.createMap({
+      name,
+      gender,
+      birth_year,
+      birth_month,
+      birth_day,
+      birth_hour:   birth_hour !== undefined ? birth_hour : 12,
+      birth_minute: birth_minute !== undefined ? birth_minute : 0,
       saju_json: saju
     });
 
     res.json({ mapId, shareUrl: `/map.html?id=${mapId}` });
   } catch (err) {
-    console.error(err);
+    console.error('Map 생성 오류:', err);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
 
 // GET /api/maps/:id — Map + 순위 조회
-app.get('/api/maps/:id', (req, res) => {
+app.get('/api/maps/:id', async (req, res) => {
   try {
-    const map = db.getMap(req.params.id);
+    const map = await db.getMap(req.params.id);
     if (!map) return res.status(404).json({ error: '존재하지 않는 Map입니다.' });
 
-    const rankings     = db.getRankings(req.params.id);
-    const visitorCount = db.getVisitorCount(req.params.id);
-    const rankedList   = rankings.map((v, i) => ({ rank: i + 1, ...v }));
+    const [rankings, visitorCount] = await Promise.all([
+      db.getRankings(req.params.id),
+      db.getVisitorCount(req.params.id)
+    ]);
+    const rankedList = rankings.map((v, i) => ({ rank: i + 1, ...v }));
 
     res.json({ map, rankings: rankedList, visitorCount });
   } catch (err) {
-    console.error(err);
+    console.error('Map 조회 오류:', err);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
 
 // POST /api/maps/:id/visit — 방문자 사주 제출 & 궁합 계산
-app.post('/api/maps/:id/visit', (req, res) => {
+app.post('/api/maps/:id/visit', async (req, res) => {
   try {
     const mapId = req.params.id;
-    const map   = db.getMap(mapId);
+    const map   = await db.getMap(mapId);
     if (!map) return res.status(404).json({ error: '존재하지 않는 Map입니다.' });
 
     const { name, gender, birth_year, birth_month, birth_day, birth_hour, birth_minute } = req.body;
@@ -78,16 +84,21 @@ app.post('/api/maps/:id/visit', (req, res) => {
 
     const visitorSaju = calcSaju({
       year: birth_year, month: birth_month, day: birth_day,
-      hour: birth_hour || 12, minute: birth_minute || 0
+      hour: birth_hour !== undefined ? birth_hour : 12,
+      minute: birth_minute !== undefined ? birth_minute : 0
     });
 
     const result = calcCompatibility(map.saju_json, visitorSaju, map.gender, gender);
 
-    const visitorId = db.addVisitor({
-      map_id: mapId, name, gender,
-      birth_year, birth_month, birth_day,
-      birth_hour:   birth_hour   || 12,
-      birth_minute: birth_minute || 0,
+    const visitorId = await db.addVisitor({
+      map_id: mapId,
+      name,
+      gender,
+      birth_year,
+      birth_month,
+      birth_day,
+      birth_hour:   birth_hour !== undefined ? birth_hour : 12,
+      birth_minute: birth_minute !== undefined ? birth_minute : 0,
       saju_json:   visitorSaju,
       score:       result.score,
       grade:       result.grade,
@@ -95,7 +106,7 @@ app.post('/api/maps/:id/visit', (req, res) => {
       detail_json: result.detail
     });
 
-    const rankings = db.getRankings(mapId);
+    const rankings = await db.getRankings(mapId);
     const myRank   = rankings.findIndex(v => v.id === visitorId) + 1;
 
     res.json({
@@ -109,31 +120,31 @@ app.post('/api/maps/:id/visit', (req, res) => {
       totalVisitors: rankings.length
     });
   } catch (err) {
-    console.error(err);
+    console.error('방문자 처리 오류:', err);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
 
 // GET /api/maps/:id/rankings — 순위표만 조회
-app.get('/api/maps/:id/rankings', (req, res) => {
+app.get('/api/maps/:id/rankings', async (req, res) => {
   try {
-    const map = db.getMap(req.params.id);
+    const map = await db.getMap(req.params.id);
     if (!map) return res.status(404).json({ error: '존재하지 않는 Map입니다.' });
 
-    const rankings   = db.getRankings(req.params.id);
+    const rankings   = await db.getRankings(req.params.id);
     const rankedList = rankings.map((v, i) => ({ rank: i + 1, ...v }));
 
     res.json({ rankings: rankedList });
   } catch (err) {
-    console.error(err);
+    console.error('순위표 조회 오류:', err);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
 
 // GET /api/visitors/:id — 방문자 결과 조회
-app.get('/api/visitors/:id', (req, res) => {
+app.get('/api/visitors/:id', async (req, res) => {
   try {
-    const visitor = db.getVisitor(req.params.id);
+    const visitor = await db.getVisitor(req.params.id);
     if (!visitor) return res.status(404).json({ error: '존재하지 않는 결과입니다.' });
     if (visitor.detail_json) {
       visitor.pros = visitor.detail_json.pros || [];
@@ -141,7 +152,7 @@ app.get('/api/visitors/:id', (req, res) => {
     }
     res.json(visitor);
   } catch (err) {
-    console.error(err);
+    console.error('방문자 조회 오류:', err);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });

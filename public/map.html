@@ -90,6 +90,9 @@
       <div id="ownerPillars" class="saju-pillars"></div>
     </div>
 
+    <!-- 👑 방장 본인 전용 비밀 사주풀이 호스트 (일반 방문자에게는 완전 숨김) -->
+    <div id="ownerSecretReadingHost"></div>
+
     <!-- 방문자 입력 폼 -->
     <div class="card fade-in" id="formCard" style="animation-delay:0.2s; margin-top:20px;">
       <div class="card-title">
@@ -256,6 +259,9 @@
 
       renderOwner(data.map);
       renderRankings(data.rankings, data.visitorCount, highlightId);
+
+      // 👑 방장 본인인지 비밀 토큰 검증 후 비밀 사주풀이 로드 (일반 친구에겐 미노출)
+      checkOwnerTokenAndRenderReading(mapId, data.map.name);
 
       document.getElementById('pageLoading').style.display = 'none';
       document.getElementById('mainContent').style.display = 'block';
@@ -561,6 +567,136 @@
   function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── 👑 방장 본인 전용 비밀 사주풀이 인증 및 렌더링 ───────────
+  let mapReadingData = null;
+
+  async function checkOwnerTokenAndRenderReading(id, ownerName) {
+    const token = localStorage.getItem('saju_owner_' + id);
+    if (!token) return; // 방장 토큰이 없으면 아무것도 렌더링 안 함 (완벽 은폐)
+
+    try {
+      const res = await fetch(`/api/maps/${id}/reading?token=${encodeURIComponent(token)}`);
+      if (!res.ok) return; // 토큰 불일치 시에도 은폐
+
+      const data = await res.json();
+      if (!data.reading) return;
+
+      mapReadingData = data.reading;
+      renderOwnerSecretAccordion(data.reading, ownerName);
+    } catch (e) {
+      // 오류 시 조용히 넘김
+    }
+  }
+
+  function renderOwnerSecretAccordion(reading, name) {
+    const host = document.getElementById('ownerSecretReadingHost');
+    if (!host) return;
+
+    host.innerHTML = `
+      <div style="margin-top:20px;">
+        <button class="owner-secret-toggle-btn" onclick="toggleOwnerReading()">
+          <span style="display:flex; align-items:center; gap:8px;">
+            <span>📜</span>
+            <span><strong>[방장 전용]</strong> ${escapeHtml(name)} 님의 4대 비밀 사주풀이</span>
+          </span>
+          <span id="readingToggleIcon" style="font-size:0.85rem; color:var(--gold);">열어보기 ▼</span>
+        </button>
+
+        <div id="ownerReadingBox" style="display:none; margin-top:12px;">
+          <div class="secret-reading-card" style="margin-top:0;">
+            <div class="secret-reading-header">
+              <div>
+                <div class="secret-title">
+                  <span>🔮</span> ${escapeHtml(name)} 님의 타고난 사주 원국 풀이
+                </div>
+                <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">
+                  본원 상징: <strong style="color:var(--gold);">${reading.symbol}</strong>
+                </div>
+              </div>
+              <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <span class="secret-badge">👑 방장 비밀 열람</span>
+                <span class="secret-badge-privacy">🔒 타인 열람 불가</span>
+              </div>
+            </div>
+
+            <!-- 4대 탭 메뉴 -->
+            <div class="reading-tabs">
+              <button class="reading-tab-btn active" onclick="switchMapReadingTab('personality', this)">
+                <span class="tab-icon">🧠</span>
+                <span>타고난 성향</span>
+              </button>
+              <button class="reading-tab-btn" onclick="switchMapReadingTab('love', this)">
+                <span class="tab-icon">💖</span>
+                <span>연애 & 애정</span>
+              </button>
+              <button class="reading-tab-btn" onclick="switchMapReadingTab('past', this)">
+                <span class="tab-icon">⏳</span>
+                <span>버텨온 과거</span>
+              </button>
+              <button class="reading-tab-btn" onclick="switchMapReadingTab('future', this)">
+                <span class="tab-icon">🚀</span>
+                <span>대박 미래운</span>
+              </button>
+            </div>
+
+            <!-- 본문 상자 -->
+            <div class="reading-body-box" id="mapReadingBodyBox">
+              ${renderMapReadingSectionHtml(reading.personality)}
+            </div>
+
+            <div class="reading-privacy-alert">
+              <span>🤫</span>
+              <span><strong>안심하이소!</strong> 이 사주풀이는 오직 방장님 화면에만 표시되며, 공유 링크를 받은 친구들에게는 절대 보이지 않습니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function toggleOwnerReading() {
+    const box = document.getElementById('ownerReadingBox');
+    const icon = document.getElementById('readingToggleIcon');
+    if (!box) return;
+
+    if (box.style.display === 'none') {
+      box.style.display = 'block';
+      icon.textContent = '접기 ▲';
+    } else {
+      box.style.display = 'none';
+      icon.textContent = '열어보기 ▼';
+    }
+  }
+
+  function switchMapReadingTab(key, btn) {
+    document.querySelectorAll('#ownerReadingBox .reading-tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if (!mapReadingData || !mapReadingData[key]) return;
+    const box = document.getElementById('mapReadingBodyBox');
+    box.style.opacity = '0';
+    setTimeout(() => {
+      box.innerHTML = renderMapReadingSectionHtml(mapReadingData[key]);
+      box.style.opacity = '1';
+    }, 150);
+  }
+
+  function renderMapReadingSectionHtml(section) {
+    const formattedContent = escapeHtml(section.content)
+      .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--gold);">$1</strong>');
+
+    const tagsHtml = (mapReadingData && mapReadingData.tags) 
+      ? mapReadingData.tags.map(t => `<span class="reading-tag">${escapeHtml(t)}</span>`).join('') 
+      : '';
+
+    return `
+      <div class="reading-topic-title">${section.title}</div>
+      <div class="reading-sub-badge">${section.sub}</div>
+      <p class="reading-text-p">${formattedContent}</p>
+      <div class="reading-tags-wrap">${tagsHtml}</div>
+    `;
   }
 
   initPage();

@@ -1,10 +1,11 @@
 ﻿const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
+const { v4: uuidv4 } = require('uuid');
 const db      = require('./db');
 const tunnel  = require('./tunnel');
-const { calcSaju }          = require('./saju_node');
-const { calcCompatibility } = require('./compat_node');
+const { calcSaju, calcOwnerReading } = require('./saju_node');
+const { calcCompatibility }         = require('./compat_node');
 
 const app  = express();
 const PORT = process.env.PORT || 4567;
@@ -17,7 +18,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 // API Routes
 // ════════════════════════════════════════════════════════════
 
-// POST /api/maps — Map 생성
+// POST /api/maps — Map 생성 (방장 사주풀이 및 비밀 토큰 동시 발급)
 app.post('/api/maps', async (req, res) => {
   try {
     const { name, gender, birth_year, birth_month, birth_day, birth_hour, birth_minute } = req.body;
@@ -32,6 +33,18 @@ app.post('/api/maps', async (req, res) => {
       minute: birth_minute !== undefined ? birth_minute : 0
     });
 
+    // 방장 전용 4대 비밀 사주풀이 (성향, 연애, 과거, 미래)
+    const reading = calcOwnerReading(saju, gender, name);
+    // 방장만 인증할 수 있는 고유 비밀 토큰
+    const ownerToken = uuidv4().replace(/-/g, '');
+
+    // 사주 데이터에 안전하게 보관 (일반 조회 시에는 마스킹됨)
+    const storedSaju = {
+      ...saju,
+      _owner_token: ownerToken,
+      _reading: reading
+    };
+
     const mapId = await db.createMap({
       name,
       gender,
@@ -40,21 +53,32 @@ app.post('/api/maps', async (req, res) => {
       birth_day,
       birth_hour:   birth_hour !== undefined ? birth_hour : 12,
       birth_minute: birth_minute !== undefined ? birth_minute : 0,
-      saju_json: saju
+      saju_json: storedSaju
     });
 
-    res.json({ mapId, shareUrl: `/map.html?id=${mapId}` });
+    res.json({
+      mapId,
+      shareUrl: `/map.html?id=${mapId}`,
+      ownerToken, // 방장에게만 1회 즉시 전달
+      reading     // 방장 전용 비밀 사주풀이
+    });
   } catch (err) {
     console.error('Map 생성 오류:', err);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
 
-// GET /api/maps/:id — Map + 순위 조회
+// GET /api/maps/:id — Map + 순위 조회 (일반 공개용, 비밀 사주풀이는 완벽 은폐)
 app.get('/api/maps/:id', async (req, res) => {
   try {
     const map = await db.getMap(req.params.id);
     if (!map) return res.status(404).json({ error: '존재하지 않는 Map입니다.' });
+
+    // 보안 필터: 방장의 비밀 사주풀이 및 토큰을 완벽 제거하여 반환
+    const safeSaju = { ...map.saju_json };
+    delete safeSaju._owner_token;
+    delete safeSaju._reading;
+    map.saju_json = safeSaju;
 
     const [rankings, visitorCount] = await Promise.all([
       db.getRankings(req.params.id),
@@ -65,6 +89,35 @@ app.get('/api/maps/:id', async (req, res) => {
     res.json({ map, rankings: rankedList, visitorCount });
   } catch (err) {
     console.error('Map 조회 오류:', err);
+    res.status(500).json({ error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// GET /api/maps/:id/reading — 방장 본인 전용 비밀 사주풀이 조회 (보안 토큰 필수)
+app.get('/api/maps/:id/reading', async (req, res) => {
+  try {
+    const token = req.query.token;
+    if (!token) {
+      return res.status(401).json({ error: '방장 인증 토큰이 필요합니다.' });
+    }
+
+    const map = await db.getMap(req.params.id);
+    if (!map) return res.status(404).json({ error: '존재하지 않는 Map입니다.' });
+
+    const rawSaju = map.saju_json;
+    if (!rawSaju || rawSaju._owner_token !== token) {
+      return res.status(403).json({ error: '방장 본인만 열람할 수 있는 비밀 사주풀이입니다.' });
+    }
+
+    // 저장된 풀이가 없으면 즉시 동적 생성 (이전 데이터 호환)
+    const reading = rawSaju._reading || calcOwnerReading(rawSaju, map.gender, map.name);
+
+    res.json({
+      name: map.name,
+      reading
+    });
+  } catch (err) {
+    console.error('사주풀이 조회 오류:', err);
     res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -175,7 +228,6 @@ db.initDb().then(() => {
   app.listen(PORT, () => {
     console.log(`\n🌌 사주 궁합 서버가 시작되었습니다!`);
     console.log(`   👉 접속 포트: ${PORT}`);
-    // 로컬 환경일 때만 Cloudflare 임시 터널링 가동
     if (!process.env.RENDER && process.env.NODE_ENV !== 'production') {
       tunnel.startTunnel(PORT);
     }

@@ -1292,3 +1292,215 @@ tr.highlight-my-rank {
   box-shadow: 0 6px 22px rgba(255, 215, 0, 0.7);
 }
 
+
+/* ══════════════════════════════════════════════════════════
+   방장 전용 4대 비밀 사주풀이 (성향 · 연애 · 과거 · 미래) 스타일
+   ══════════════════════════════════════════════════════════ */
+
+.secret-reading-card {
+  background: linear-gradient(145deg, rgba(26, 10, 48, 0.85), rgba(15, 0, 35, 0.95));
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(255, 215, 0, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 24px 22px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 24px;
+}
+
+.secret-reading-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gold), #FF69B4, var(--lavender), transparent);
+}
+
+.secret-reading-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed rgba(200, 162, 255, 0.2);
+}
+
+.secret-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.secret-badge-privacy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: #80E5FF;
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.secret-title {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 4대 탭 메뉴 */
+.reading-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 480px) {
+  .reading-tabs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.reading-tab-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(200, 162, 255, 0.2);
+  color: var(--text-secondary);
+  padding: 10px 8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.reading-tab-btn:hover {
+  background: rgba(200, 162, 255, 0.12);
+  color: var(--text-primary);
+  border-color: var(--lavender);
+}
+
+.reading-tab-btn.active {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(200, 162, 255, 0.15));
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.25);
+}
+
+.reading-tab-btn .tab-icon {
+  font-size: 1.35rem;
+}
+
+/* 내용 상자 */
+.reading-body-box {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(200, 162, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: 22px 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.reading-topic-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--gold-light);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reading-sub-badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  color: var(--lavender);
+  background: rgba(200, 162, 255, 0.1);
+  border: 1px solid rgba(200, 162, 255, 0.25);
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+}
+
+.reading-text-p {
+  color: #e5daf5;
+  font-size: 0.95rem;
+  line-height: 1.8;
+  word-break: keep-all;
+  white-space: pre-line;
+  margin-bottom: 16px;
+}
+
+.reading-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.reading-tag {
+  font-size: 0.8rem;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-weight: 500;
+}
+
+.reading-privacy-alert {
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: rgba(0, 229, 255, 0.06);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  color: #aaeaff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 맵 화면에서 접었다 폈다 하는 아코디언 토글 버튼 */
+.owner-secret-toggle-btn {
+  width: 100%;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(120, 40, 200, 0.25));
+  border: 1px solid var(--gold);
+  color: var(--gold) !important;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  box-shadow: 0 4px 18px rgba(255, 215, 0, 0.15);
+  transition: var(--transition);
+}
+
+.owner-secret-toggle-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(120, 40, 200, 0.35));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 215, 0, 0.25);
+}

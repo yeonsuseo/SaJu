@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>국가대표 마블 레이스</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gothic+A1:wght@500;700;900&display=swap">
+<style>
+/* Layout: one 9:16 neon arcade screen (reels frame) with a control strip below. Single dark theme by choice. */
+:root{
+  --bg:#070b18; --panel:#121a33; --line:#25305a; --ink:#eef2ff; --muted:#8b93b8; --gold:#ffd23f;
+  --display:"Black Han Sans","Gothic A1",system-ui,sans-serif; --body:"Gothic A1",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);margin:0;box-sizing:border-box;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;overflow:hidden;
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+canvas{display:block;border-radius:14px;box-shadow:0 0 0 1px var(--line),0 20px 60px rgba(0,0,0,.6);cursor:pointer;max-width:100%}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+button{font:inherit;font-weight:700;font-size:14px;padding:10px 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button.primary{background:var(--gold);color:#1a1300;border-color:transparent}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.hint{color:var(--muted);font-size:12px}
+</style>
+
+<canvas id="c" aria-label="마블 레이스 화면. 탭하면 시작"></canvas>
+<div class="bar">
+  <button class="primary" id="go">시작</button>
+  <button id="again">새 판</button>
+  <button id="snd">소리 켜짐</button>
+  <span class="hint">화면 녹화해서 릴스로 올리세요 · 스페이스바로 시작</span>
+</div>
+
+<script>
+const W=360, VH=640, S=3, FINISH=2950, WORLD=3100, G=900;
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+cv.width=W*S; cv.height=VH*S;
+function fit(){const bh=document.querySelector('.bar').offsetHeight;const h=Math.min(innerHeight-bh-40,(innerWidth-32)*16/9);cv.style.height=h+'px';cv.style.width=h*9/16+'px'}
+addEventListener('resize',fit); fit();
+
+/* ---------- flags (simplified, drawn once) ---------- */
+const fill=(g,c)=>{g.fillStyle=c;g.fillRect(0,0,64,64)};
+const dot=(g,x,y,r,c)=>{g.fillStyle=c;g.beginPath();g.arc(x,y,r,0,7);g.fill()};
+const vs=(g,cs)=>cs.forEach((c,i)=>{g.fillStyle=c;g.fillRect(i*64/cs.length,0,64/cs.length+1,64)});
+const hs=(g,cs)=>cs.forEach((c,i)=>{g.fillStyle=c;g.fillRect(0,i*64/cs.length,64,64/cs.length+1)});
+const ln=(g,a,b,c,d)=>{g.beginPath();g.moveTo(a,b);g.lineTo(c,d);g.stroke()};
+const star=(g,x,y,r,c)=>{g.fillStyle=c;g.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.42:r;g.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr)}g.fill()};
+const FLAGS={
+ '한국':g=>{fill(g,'#fff');g.fillStyle='#cd2e3a';g.beginPath();g.arc(32,32,15,Math.PI,0);g.fill();g.fillStyle='#0047a0';g.beginPath();g.arc(32,32,15,0,Math.PI);g.fill();g.fillStyle='#111';[[12,14],[52,14],[12,50],[52,50]].forEach(([x,y])=>g.fillRect(x-5,y-3,10,6))},
+ '일본':g=>{fill(g,'#fff');dot(g,32,32,15,'#bc002d')},
+ '미국':g=>{hs(g,['#b22234','#fff','#b22234','#fff','#b22234','#fff','#b22234']);g.fillStyle='#3c3b6e';g.fillRect(0,0,30,32)},
+ '중국':g=>{fill(g,'#de2910');star(g,22,22,12,'#ffde00')},
+ '브라질':g=>{fill(g,'#009c3b');g.fillStyle='#ffdf00';g.beginPath();g.moveTo(32,8);g.lineTo(60,32);g.lineTo(32,56);g.lineTo(4,32);g.fill();dot(g,32,32,12,'#002776')},
+ '프랑스':g=>vs(g,['#0055a4','#fff','#ef4135']),
+ '독일':g=>hs(g,['#111','#dd0000','#ffce00']),
+ '영국':g=>{fill(g,'#012169');g.strokeStyle='#fff';g.lineWidth=12;ln(g,0,0,64,64);ln(g,64,0,0,64);g.lineWidth=16;ln(g,32,0,32,64);ln(g,0,32,64,32);g.strokeStyle='#c8102e';g.lineWidth=9;ln(g,32,0,32,64);ln(g,0,32,64,32)},
+ '이탈리아':g=>vs(g,['#009246','#fff','#ce2b37']),
+ '캐나다':g=>{vs(g,['#d52b1e','#fff','#fff','#d52b1e']);star(g,32,32,11,'#d52b1e')},
+ '멕시코':g=>{vs(g,['#006847','#fff','#ce1126']);dot(g,32,32,7,'#8c5a2b')},
+ '베트남':g=>{fill(g,'#da251d');star(g,32,33,17,'#ffff00')},
+};
+const NAMES=Object.keys(FLAGS);
+const IMG=NAMES.map(n=>{const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.scale(4,4);FLAGS[n](g);return c});
+const NOTES=[523,587,659,784,880,1047,1175,1319,1568,1760,2093,2349];
+
+/* ---------- course ---------- */
+const segs=[], pegs=[], bumps=[], spins=[], labels=[];
+const seg=(x1,y1,x2,y2)=>segs.push({x1,y1,x2,y2});
+seg(0,-300,0,WORLD); seg(W,-300,W,WORLD); seg(0,WORLD-20,W,WORLD-20);
+const gate={x1:0,y1:150,x2:W,y2:150};
+labels.push([190,'구간 1 · 핀볼']);
+for(let row=0,y=200;y<720;row++,y+=32){const off=row%2?18:0;for(let x=18+off;x<W-6;x+=36)pegs.push({x,y,r:4})}
+labels.push([765,'구간 2 · 지그재그']);
+let zy=780; for(let i=0;i<5;i++){i%2?seg(W,zy,50,zy+75):seg(0,zy,W-50,zy+75); zy+=105}
+labels.push([1280,'구간 3 · 회전 지옥']);
+[[1330,[[90,2.2],[270,-2.2]]],[1480,[[180,-2.8]]],[1630,[[90,-2.4],[270,2.4]]],[1780,[[180,3]]]]
+ .forEach(([y,list])=>list.forEach(([x,w])=>spins.push({cx:x,cy:y,L:52,w,a:0})));
+labels.push([1885,'구간 4 · 깔때기']);
+const HOLE=32; seg(0,1900,W/2-HOLE/2,2010); seg(W,1900,W/2+HOLE/2,2010);
+labels.push([2070,'구간 5 · 범퍼 존']);
+[[2100,[110,250]],[2200,[60,180,300]],[2300,[120,240]],[2400,[60,180,300]],[2500,[120,240]]]
+ .forEach(([y,xs])=>xs.forEach(x=>bumps.push({x,y,r:16,flash:0})));
+for(let row=0,y=2600;y<2900;row++,y+=30){const off=row%2?20:0;for(let x=30+off;x<W-20;x+=40)pegs.push({x,y,r:4})}
+// self-check: every opening must fit a marble (diameter 18)
+console.assert(HOLE>18 && 36-8>18 && 40-8>18 && 50>18,'course gap too narrow for a marble');
+
+/* ---------- sound ---------- */
+let ac=null, soundOn=true, lastS=0;
+function tone(f,v=.07,len=.12,type='triangle'){
+  if(!ac||!soundOn) return; const t=ac.currentTime;
+  const o=ac.createOscillator(), g=ac.createGain(); o.type=type; o.frequency.value=f;
+  g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+len);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t+len+.01);
+}
+function blip(f,v){ if(!ac) return; const t=ac.currentTime; if(t-lastS<.03) return; lastS=t; tone(f,v) }
+function fanfare(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>tone(f,.12,.35,'square'),i*130))}
+
+/* ---------- state ---------- */
+let ms, state, ranks, raceT, cam, countT, doneT, ts=1, conf=[];
+function reset(){
+  const order=NAMES.map((_,i)=>i).sort(()=>Math.random()-.5);
+  ms=order.map((ci,k)=>({ci,name:NAMES[ci],img:IMG[ci],x:32+(k%6)*59+Math.random()*4,y:78+Math.floor(k/6)*32,vx:0,vy:0,r:9,a:0,done:false,still:0}));
+  gate.on=true; state='title'; ranks=[]; raceT=0; cam=0; doneT=0; conf=[]; spins.forEach(s=>s.a=0);
+}
+reset();
+function start(){
+  if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+  if(state==='title'){state='count';countT=3.999;tone(660,.1,.15,'square')}
+  else if(state==='done'){reset()}
+}
+cv.addEventListener('click',start);
+document.getElementById('go').onclick=start;
+document.getElementById('again').onclick=()=>reset();
+document.getElementById('snd').onclick=e=>{soundOn=!soundOn;e.target.textContent=soundOn?'소리 켜짐':'소리 꺼짐'};
+addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='Enter'){e.preventDefault();start()}});
+
+/* ---------- physics ---------- */
+function hitSeg(m,x1,y1,x2,y2,th,e,sp){
+  const dx=x2-x1, dy=y2-y1; let t=((m.x-x1)*dx+(m.y-y1)*dy)/(dx*dx+dy*dy); t=t<0?0:t>1?1:t;
+  const px=x1+t*dx, py=y1+t*dy; let nx=m.x-px, ny=m.y-py; const d2=nx*nx+ny*ny, R=m.r+th;
+  if(d2>=R*R||d2<1e-9) return; const d=Math.sqrt(d2); nx/=d; ny/=d;
+  m.x=px+nx*R; m.y=py+ny*R;
+  const svx=sp?-sp.w*(py-sp.cy):0, svy=sp?sp.w*(px-sp.cx):0;
+  const rvx=m.vx-svx, rvy=m.vy-svy, vn=rvx*nx+rvy*ny;
+  if(vn<0){const tx=-ny,ty=nx,vt=(rvx*tx+rvy*ty)*.995;
+    m.vx=svx+nx*(-vn*e)+tx*vt; m.vy=svy+ny*(-vn*e)+ty*vt;
+    if(-vn>160) blip(NOTES[m.ci]/2,.05)}
+}
+function hitCircle(m,c,e,kick){
+  const dx=m.x-c.x, dy=m.y-c.y, d2=dx*dx+dy*dy, R=m.r+c.r;
+  if(d2>=R*R||d2<1e-9) return; const d=Math.sqrt(d2), nx=dx/d, ny=dy/d;
+  m.x=c.x+nx*R; m.y=c.y+ny*R; const vn=m.vx*nx+m.vy*ny;
+  if(vn<0){m.vx-=(1+e)*vn*nx; m.vy-=(1+e)*vn*ny;
+    if(kick){const out=m.vx*nx+m.vy*ny; if(out<kick){m.vx+=nx*(kick-out);m.vy+=ny*(kick-out)} c.flash=1; blip(NOTES[m.ci],.08)}
+    else if(-vn>140) blip(NOTES[m.ci],.05)}
+}
+function step(dt){
+  spins.forEach(s=>s.a+=s.w*dt);
+  for(const m of ms){
+    m.vy+=G*dt; m.vx*=.9995;
+    const sp=Math.hypot(m.vx,m.vy); if(sp>900){m.vx*=900/sp;m.vy*=900/sp}
+    m.x+=m.vx*dt; m.y+=m.vy*dt; m.a+=m.vx*dt/m.r;
+    if(m.y<cam+VH+60&&m.y>cam-60||true){
+      for(const s of segs) hitSeg(m,s.x1,s.y1,s.x2,s.y2,1.5,.4);
+      if(gate.on) hitSeg(m,gate.x1,gate.y1,gate.x2,gate.y2,1.5,.2);
+      for(const s of spins) for(let k=0;k<2;k++){const a=s.a+k*Math.PI/2,c=Math.cos(a)*s.L,n=Math.sin(a)*s.L;hitSeg(m,s.cx-c,s.cy-n,s.cx+c,s.cy+n,3,.5,s)}
+      if(m.y>150&&m.y<2950) for(const p of pegs) if(Math.abs(p.y-m.y)<20) hitCircle(m,p,.5,0);
+      if(m.y>2060&&m.y<2540) for(const b of bumps) hitCircle(m,b,.9,380);
+    }
+  }
+  for(let i=0;i<ms.length;i++)for(let j=i+1;j<ms.length;j++){
+    const a=ms[i],b=ms[j],dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy,R=a.r+b.r;
+    if(d2>=R*R||d2<1e-6) continue; const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,p=(R-d)/2;
+    a.x-=nx*p;a.y-=ny*p;b.x+=nx*p;b.y+=ny*p;
+    const rv=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+    if(rv<0){const J=-1.7*rv/2;a.vx-=J*nx;a.vy-=J*ny;b.vx+=J*nx;b.vy+=J*ny;if(-rv>220)blip(NOTES[a.ci],.04)}
+  }
+  if(state!=='race') return;
+  raceT+=dt;
+  for(const m of ms){
+    if(m.done) continue;
+    if(m.y>FINISH){m.done=true;m.time=raceT;ranks.push(m);tone(ranks.length===1?1568:NOTES[m.ci],.1,.25,'square');if(ranks.length===1)fanfare();continue}
+    // unstick: marbles resting on a peg or jammed in the funnel get a nudge
+    m.still=Math.hypot(m.vx,m.vy)<15?m.still+dt:0;
+    if(m.still>1.2){m.vx+=(Math.random()-.5)*240;m.vy-=160;m.still=0}
+  }
+  const left=ms.filter(m=>!m.done);
+  if((ranks.length>=3&&(left.length===0||raceT-ranks[2].time>4))||raceT>120){
+    left.sort((a,b)=>b.y-a.y).forEach(m=>{m.done=true;ranks.push(m)});
+    state='done'; doneT=0;
+    for(let i=0;i<140;i++)conf.push({x:Math.random()*W,y:-Math.random()*300,vx:(Math.random()-.5)*60,vy:80+Math.random()*120,c:['#ffd23f','#ff4d6d','#4dd2ff','#7cff6b','#fff'][i%5],a:Math.random()*6})
+  }
+}
+function standings(){return [...ranks,...ms.filter(m=>!m.done).sort((a,b)=>b.y-a.y)]}
+
+/* ---------- drawing ---------- */
+const F=(w,s,f='var')=>`${w} ${s}px ${f==='d'?'"Black Han Sans"':'"Gothic A1"'}, system-ui, sans-serif`;
+function txt(t,x,y,font,col,align='center',stroke=0){ctx.font=font;ctx.textAlign=align;ctx.textBaseline='middle';if(stroke){ctx.lineWidth=stroke;ctx.strokeStyle='rgba(5,8,20,.9)';ctx.lineJoin='round';ctx.strokeText(t,x,y)}ctx.fillStyle=col;ctx.fillText(t,x,y)}
+function flagBall(img,x,y,r,rot=0,ring='rgba(255,255,255,.95)'){
+  ctx.save();ctx.translate(x,y);ctx.beginPath();ctx.arc(0,0,r,0,7);ctx.save();ctx.clip();ctx.rotate(rot);ctx.drawImage(img,-r,-r,2*r,2*r);ctx.restore();
+  const g=ctx.createRadialGradient(-r*.35,-r*.45,r*.1,0,0,r);g.addColorStop(0,'rgba(255,255,255,.55)');g.addColorStop(.45,'rgba(255,255,255,0)');g.addColorStop(1,'rgba(0,0,0,.35)');
+  ctx.fillStyle=g;ctx.fill();ctx.lineWidth=Math.max(1.2,r*.12);ctx.strokeStyle=ring;ctx.stroke();ctx.restore();
+}
+function drawWorld(){
+  ctx.setTransform(S,0,0,S,0,-cam*S);
+  const top=cam-40, bot=cam+VH+40;
+  for(const [y,t] of labels) if(y>top&&y<bot) txt(t,12,y,F(900,11),'rgba(160,175,230,.5)','left');
+  // finish line
+  if(FINISH>top&&FINISH<bot){for(let i=0;i<24;i++)for(let r=0;r<2;r++){ctx.fillStyle=(i+r)%2?'#fff':'#111';ctx.fillRect(i*15,FINISH-6+r*6,15,6)}txt('FINISH',W/2,FINISH-20,F(400,18,'d'),'#ffd23f','center',4)}
+  ctx.lineCap='round';
+  ctx.strokeStyle='#5b6cff';ctx.lineWidth=3;ctx.shadowColor='#5b6cff';ctx.shadowBlur=8;
+  for(const s of segs){if(Math.max(s.y1,s.y2)<top||Math.min(s.y1,s.y2)>bot)continue;ctx.beginPath();ctx.moveTo(s.x1,s.y1);ctx.lineTo(s.x2,s.y2);ctx.stroke()}
+  if(gate.on){ctx.strokeStyle='#ff4d6d';ctx.shadowColor='#ff4d6d';ctx.setLineDash([8,6]);ctx.beginPath();ctx.moveTo(0,gate.y1);ctx.lineTo(W,gate.y1);ctx.stroke();ctx.setLineDash([])}
+  ctx.strokeStyle='#ff9f1c';ctx.shadowColor='#ff9f1c';ctx.lineWidth=6;
+  for(const s of spins){if(s.cy<top||s.cy>bot)continue;for(let k=0;k<2;k++){const a=s.a+k*Math.PI/2,c=Math.cos(a)*s.L,n=Math.sin(a)*s.L;ctx.beginPath();ctx.moveTo(s.cx-c,s.cy-n);ctx.lineTo(s.cx+c,s.cy+n);ctx.stroke()}}
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#cfd6ff';for(const p of pegs){if(p.y<top||p.y>bot)continue;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill()}
+  for(const b of bumps){if(b.y<top||b.y>bot)continue;b.flash*=.9;
+    ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,7);ctx.fillStyle=`rgba(255,77,109,${.18+b.flash*.6})`;ctx.fill();
+    ctx.lineWidth=3;ctx.strokeStyle='#ff4d6d';ctx.shadowColor='#ff4d6d';ctx.shadowBlur=6+b.flash*20;ctx.stroke();ctx.shadowBlur=0}
+  for(const m of ms){if(m.y<top||m.y>bot)continue;flagBall(m.img,m.x,m.y,m.r,m.a)}
+  for(const m of ms){if(m.y<top||m.y>bot)continue;txt(m.name,m.x,m.y-m.r-6,F(900,8),'#fff','center',2.5)}
+}
+function pill(x,y,w,h,c){ctx.beginPath();ctx.roundRect(x,y,w,h,h/2);ctx.fillStyle=c;ctx.fill()}
+function drawHud(){
+  ctx.setTransform(S,0,0,S,0,0);
+  if(state==='race'||state==='count'){
+    const st=standings();
+    pill(10,10,128,78,'rgba(7,11,24,.78)');
+    txt('LIVE 순위',22,24,F(900,9),'#ff4d6d','left');
+    st.slice(0,3).forEach((m,i)=>{const y=42+i*18;txt(i+1+'',24,y,F(400,13,'d'),i?'#cfd6ff':'#ffd23f');flagBall(m.img,42,y,6);txt(m.name,54,y,F(900,11),'#fff','left')});
+    const t=raceT.toFixed(1);pill(W-78,10,68,24,'rgba(7,11,24,.78)');txt(t+'초',W-44,22,F(900,12),'#fff');
+    // progress track
+    const X=W-12,Y0=70,Y1=VH-40;ctx.strokeStyle='rgba(255,255,255,.18)';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(X,Y0);ctx.lineTo(X,Y1);ctx.stroke();
+    txt('결승',X,Y1+12,F(900,8),'#ffd23f');
+    [...st].reverse().forEach(m=>flagBall(m.img,X,Y0+(Y1-Y0)*Math.min(1,Math.max(0,(m.y-150)/(FINISH-150))),5));
+    if(ts<1) txt('슬로모션',W/2,VH-28,F(400,20,'d'),'#ffd23f','center',4);
+  }
+  if(state==='title'){
+    ctx.fillStyle='rgba(7,11,24,.55)';ctx.fillRect(0,170,W,VH-170);
+    txt('12개국 마블 레이스',W/2,300,F(900,16),'#ffd23f','center',4);
+    txt('누가 1등할까?',W/2,350,F(400,46,'d'),'#fff','center',6);
+    txt('끝까지 보고 맞혀보세요',W/2,400,F(700,14),'#cfd6ff','center',3);
+    const p=.6+.4*Math.sin(performance.now()/250);
+    ctx.globalAlpha=p;txt('탭해서 시작',W/2,520,F(900,15),'#fff','center',3);ctx.globalAlpha=1;
+  }
+  if(state==='count'){const n=Math.ceil(countT-1);txt(n>0?n+'':'GO!',W/2,330,F(400,n>0?110:90,'d'),n>0?'#fff':'#ffd23f','center',8)}
+  if(state==='done'){
+    const k=Math.min(1,doneT/.6), e=1-Math.pow(1-k,3);
+    ctx.fillStyle=`rgba(7,11,24,${.82*e})`;ctx.fillRect(0,0,W,VH);
+    for(const c of conf){ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.a);ctx.fillStyle=c.c;ctx.fillRect(-3,-1.5,6,3);ctx.restore()}
+    ctx.globalAlpha=e;
+    const w=ranks[0];
+    txt('우승',W/2,110,F(900,16),'#ffd23f','center');
+    ctx.shadowColor='#ffd23f';ctx.shadowBlur=30;flagBall(w.img,W/2,195,56*e,0,'#ffd23f');ctx.shadowBlur=0;
+    txt(w.name+'!',W/2,290,F(400,48,'d'),'#fff','center',6);
+    txt(w.time.toFixed(2)+'초',W/2,328,F(700,13),'#cfd6ff');
+    [[1,100],[2,260]].forEach(([i,x])=>{const m=ranks[i];flagBall(m.img,x,385,28);txt(i+1+'위 '+m.name,x,428,F(900,15),i===1?'#e6e9f5':'#e0a06a','center',3)});
+    ranks.slice(3).forEach((m,i)=>{const col=i%3,row=Math.floor(i/3),x=60+col*120,y=478+row*22;flagBall(m.img,x-30,y,7);txt(i+4+'위 '+m.name,x-18,y,F(700,11),'#cfd6ff','left')});
+    pill(30,580,W-60,36,'#ffd23f');txt('다음 판 출전국, 댓글로 정해주세요',W/2,598,F(900,14),'#1a1300');
+    ctx.globalAlpha=1;
+  }
+}
+function frame(){
+  ctx.setTransform(1,0,0,1,0,0);
+  const g=ctx.createLinearGradient(0,0,0,cv.height);g.addColorStop(0,'#0b1230');g.addColorStop(1,'#070b18');ctx.fillStyle=g;ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.setTransform(S,0,0,S,0,-cam*S);ctx.strokeStyle='rgba(91,108,255,.07)';ctx.lineWidth=1;
+  for(let y=Math.floor(cam/40)*40;y<cam+VH;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+  drawWorld(); drawHud();
+}
+
+/* ---------- loop ---------- */
+let last=performance.now(), acc=0;
+function loop(now){
+  let dt=Math.min(.05,(now-last)/1000); last=now;
+  if(state==='count'){const before=Math.ceil(countT-1);countT-=dt;const after=Math.ceil(countT-1);if(after!==before)tone(after>0?660:1320,.12,.2,'square');if(countT<=1){gate.on=false;state='race'}}
+  if(state==='done'){doneT+=dt;for(const c of conf){c.x+=c.vx*dt;c.y+=c.vy*dt;c.a+=dt*4}}
+  // slow motion when the top two are neck and neck near the finish
+  ts=1;
+  if(state==='race'&&ranks.length===0){const st=standings();if(FINISH-st[0].y<150&&st[0].y-st[1].y<45)ts=.3}
+  acc+=dt*ts; const h=1/240; while(acc>=h){step(h);acc-=h}
+  let target=0;
+  if(state==='race'||state==='done'){const st=standings();target=(ranks.length?FINISH:st[0].y)-VH*.45}
+  cam+=(Math.max(0,Math.min(WORLD-VH,target))-cam)*Math.min(1,dt*4);
+  frame(); requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>

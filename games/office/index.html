@@ -1,0 +1,1602 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>한특1층 사무실</title>
+<meta property="og:title" content="한특1층 사무실">
+<meta property="og:description" content="링크를 열고 닉네임을 정하면 바로 들어와요">
+<meta property="og:type" content="website">
+<meta name="description" content="링크를 열고 닉네임을 정하면 바로 들어와요">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<style>
+/* Layout: full-bleed canvas office, HUD floats over it. Deliberately single-theme. */
+:root{
+  --floor:#d9dde3; --ink:#22301f; --paper:#fffdf5; --accent:#ff7448; --muted:#5b6b55;
+  --display:"Jua","Gowun Dodum",system-ui,sans-serif;
+  --body:"Gowun Dodum",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--floor);color:var(--ink);font-family:var(--body);overflow:hidden}
+#gl,#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#nogl{position:fixed;left:50%;top:40%;transform:translateX(-50%);max-width:calc(100% - 32px)}
+#cv.playing{cursor:crosshair}
+.hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;
+  padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(12px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill{background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:4px 12px;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+.pill b{font-family:var(--display);font-weight:400}
+.keys{color:var(--muted)}
+.sens{display:flex;align-items:center;gap:6px;font-family:var(--display)}
+.sens input{width:90px;accent-color:var(--accent);margin:0}
+kbd{font-family:var(--display);border:1.5px solid var(--ink);border-radius:5px;padding:0 5px;background:#fff}
+#chat{pointer-events:auto;display:flex;gap:8px;max-width:520px;width:100%;margin-inline:auto}
+#chat input{flex:1;min-width:0;font:16px var(--body);padding:10px 14px;border:2px solid var(--ink);border-radius:14px;background:var(--paper);color:var(--ink)}
+button{font:18px var(--display);padding:8px 18px;border:2px solid var(--ink);border-radius:14px;background:var(--accent);color:#fff;box-shadow:0 3px 0 var(--ink);cursor:pointer}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#join{position:fixed;inset:0;display:grid;place-items:center;background:rgba(34,48,31,.35);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#join form{background:var(--paper);border:2px solid var(--ink);border-radius:22px;box-shadow:0 6px 0 var(--ink);padding:24px;display:grid;gap:14px;width:min(360px,100%)}
+#join h1{font:400 34px/1.1 var(--display);margin:0;text-wrap:balance}
+#join p{margin:0;color:var(--muted);line-height:1.5}
+#join input[type=text]{font:18px var(--body);padding:10px 14px;border:2px solid var(--ink);border-radius:14px;background:#fff;color:var(--ink)}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:10px}
+legend{font-family:var(--display);margin-bottom:8px}
+.sw{position:relative;cursor:pointer}
+.sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.sw span{display:block;width:32px;height:32px;border-radius:50%;border:2.5px solid var(--ink)}
+.sw input:checked+span{box-shadow:0 0 0 3px var(--paper),0 0 0 6px var(--ink)}
+.sw input:focus-visible+span{outline:3px solid var(--accent);outline-offset:6px}
+#toasts{position:fixed;left:0;right:0;top:28%;display:grid;justify-items:center;gap:8px;pointer-events:none;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.toast{font:400 20px var(--display);background:var(--ink);color:var(--paper);padding:10px 20px;border-radius:999px;
+  text-align:center;max-width:100%;animation:toast 3.2s ease forwards}
+@keyframes toast{0%{opacity:0;transform:translateY(8px)}10%,80%{opacity:1;transform:none}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}}
+.board{position:fixed;top:calc(64px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));
+  width:220px;max-width:calc(50vw - 24px);background:var(--paper);border:2px solid var(--ink);border-radius:18px;
+  box-shadow:0 4px 0 var(--ink);padding:12px 14px;display:grid;gap:10px}
+.board h2{font:400 18px var(--display);margin:0}
+.board-toggle{all:unset;cursor:pointer;display:flex;justify-content:space-between;width:100%;font:inherit}
+.board-toggle:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:6px}
+.board.min{gap:0}
+.board.min ol,.board.min .board-actions,.board.min .host{display:none}
+.host{border-top:2px dashed var(--ink);padding-top:10px;display:grid;gap:6px}
+.host h3{font:400 15px var(--display);margin:0}.host small{color:var(--muted);font-size:12px}
+.host ul{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:160px;overflow-y:auto;font-size:14px}
+.board .host li{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:0}
+.host li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.host button{background:#d64545}
+.kicked{position:fixed;inset:0;display:grid;place-items:center;background:rgba(34,48,31,.6);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.kicked-card{background:var(--paper);border:2px solid var(--ink);border-radius:22px;box-shadow:0 6px 0 var(--ink);padding:24px 28px;text-align:center}
+.kicked-card h2{font:400 28px var(--display);margin:0 0 8px}.kicked-card p{margin:0;color:var(--muted)}
+.board.min .board-toggle span{transform:rotate(-90deg)}
+.board ol{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:14px}
+.board li{display:grid;grid-template-columns:22px 12px 1fr auto;gap:6px;align-items:center;padding:3px 6px;border-radius:8px}
+.board li.me{background:#ffe3d8;font-weight:700}
+.board .n{font-family:var(--display);color:var(--muted);font-variant-numeric:tabular-nums}
+.board .dot{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--ink)}
+.board .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .kg{font-family:var(--display);font-variant-numeric:tabular-nums}
+.board .empty{color:var(--muted);display:block}
+.board li.off{opacity:.55}
+#feed{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));
+  width:min(380px,calc(100% - 32px));display:flex;flex-direction:column;align-items:flex-start;gap:6px;pointer-events:none}
+.msg{font-size:15px;line-height:1.4;overflow-wrap:anywhere;max-width:100%}
+#feed .msg{background:rgba(34,48,31,.82);color:var(--paper);padding:6px 12px;border-radius:12px;overflow:hidden;animation:feedIn .45s ease-out}
+.msg b{font-family:var(--display);font-weight:400;color:var(--c)}
+#feed .msg b{text-shadow:0 0 1px #000}
+@keyframes feedIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#feed .msg{animation:none}}
+/* touch controls: only on touch screens, only after joining */
+.touch{display:none}
+@media (pointer:coarse){
+  .keys{display:none}
+  #play.touch{display:block}
+  #feed{bottom:calc(230px + env(safe-area-inset-bottom,0px));width:min(300px,calc(100% - 32px))}
+  .board{width:170px;padding:8px 12px;top:calc(60px + env(safe-area-inset-top,0px))}
+  .board h2{font-size:16px}
+  .board ol{max-height:150px;overflow-y:auto;font-size:13px}
+  #toasts{top:calc(118px + env(safe-area-inset-top,0px))}
+  .toast{font-size:16px;padding:8px 16px}
+}
+/* phone held sideways: smaller controls, chat between them, feed right of the stick */
+@media (pointer:coarse) and (max-height:500px){
+  #play #stick{width:110px;height:110px;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  #play #pads{grid-template-columns:repeat(4,52px);gap:8px;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+  #play #pads button{width:52px;height:52px;font-size:13px}
+  #chat{max-width:none;width:auto;margin:0 calc(260px + 16px) 0 140px}
+  #feed{left:calc(150px + env(safe-area-inset-left,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:min(300px,calc(100% - 460px))}
+  #toasts{top:16px}
+  .board ol{max-height:110px}
+}
+#stick{position:fixed;left:max(20px,env(safe-area-inset-left,0px));bottom:calc(80px + env(safe-area-inset-bottom,0px));
+  width:130px;height:130px;border-radius:50%;background:rgba(255,253,245,.55);border:2px solid var(--ink);touch-action:none}
+#knob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;
+  background:var(--paper);border:2px solid var(--ink);box-shadow:0 3px 0 var(--ink);pointer-events:none}
+#pads{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(80px + env(safe-area-inset-bottom,0px));
+  display:grid;grid-template-columns:repeat(2,64px);gap:10px}
+#pads button{width:64px;height:64px;padding:0;border-radius:50%;font-size:15px;line-height:1.1;touch-action:manipulation;
+  -webkit-user-select:none;user-select:none}
+#pads button.alt{background:var(--paper);color:var(--ink)}
+#logDlg{width:min(460px,calc(100% - 32px));max-height:70vh;padding:0;border:2px solid var(--ink);border-radius:18px;
+  background:var(--paper);color:var(--ink);box-shadow:0 6px 0 var(--ink)}
+#logDlg::backdrop{background:rgba(34,48,31,.35)}
+.log-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:2px solid var(--ink)}
+.log-head h2{font:400 20px var(--display);margin:0}
+#logList{overflow-y:auto;max-height:calc(70vh - 60px);padding:12px 16px;display:grid;gap:6px}
+#logList .msg b{text-shadow:none;filter:brightness(.8)}
+#logList time{color:var(--muted);font-size:12px;margin-right:8px;font-variant-numeric:tabular-nums}
+#logList .empty{color:var(--muted);margin:0}
+.board-actions{display:flex;flex-wrap:wrap;gap:6px}
+button.small{font-size:14px;padding:4px 10px;border-radius:10px;box-shadow:0 2px 0 var(--ink)}
+button.ghost{background:var(--paper);color:var(--ink)}
+.join-actions{display:flex;gap:8px}.join-actions button{flex:1}
+#cele{position:fixed;inset:0;display:grid;place-items:center;pointer-events:none;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.cele-card{background:var(--paper);border:3px solid var(--ink);border-radius:26px;box-shadow:0 8px 0 var(--ink);
+  padding:24px 36px;text-align:center;animation:cele 4.6s ease forwards}
+.cele-card p{margin:0}
+.cele-big{font:400 44px/1.1 var(--display);color:var(--accent)}
+#celeName{font:400 22px var(--display);margin-top:8px!important}
+@keyframes cele{0%{opacity:0;transform:scale(.7)}10%{opacity:1;transform:scale(1.06)}16%{transform:scale(1)}65%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.cele-card{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="gl" aria-hidden="true"></canvas>
+<canvas id="cv" aria-label="3D 사무실: 접속한 사람들의 캐릭터가 보이는 화면"></canvas>
+<p id="nogl" class="pill" hidden>이 브라우저는 3D를 지원하지 않아요. <a href="/2d" style="pointer-events:auto">2D 버전으로 들어가기</a></p>
+<div class="hud">
+  <div class="top">
+    <span class="pill" id="status"><b>연결 중…</b></span>
+    <button type="button" class="small ghost" id="openLog" style="pointer-events:auto">대화 내역</button>
+    <label class="pill sens" style="pointer-events:auto">감도 <input type="range" id="sens" min="0.2" max="2" step="0.1" value="1" aria-label="마우스 감도"></label>
+    <button type="button" class="small ghost keys" id="keysBtn" aria-expanded="false" aria-controls="keysHelp" style="pointer-events:auto">조작법</button>
+    <span class="pill keys" id="keysHelp" hidden><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 이동 · <kbd>Space</kbd> 점프 · <kbd>F</kbd> 똥 · <kbd>R</kbd> 똥 치우기 · <kbd>E</kbd> 먹기/줍기(과자 +1 · 도시락 +5 · 3단 도시락 +10KG) · <kbd>클릭</kbd> 돌 던지기(−1KG), 방망이 들면 휘두르기(−5KG) · TRG 들면 <kbd>우클릭</kbd> 누른 채 스코프 + <kbd>클릭</kbd> 발사(−20KG) · <kbd>마우스</kbd> 시점 · <kbd>휠</kbd> 카메라 거리 · <kbd>X</kbd> 의자 들기/내려놓기, 들고 <kbd>클릭</kbd> 꾹 눌렀다 떼면 던지기(−10~−50KG) · <kbd>Enter</kbd> 대화</span>
+  </div>
+  <form id="chat" hidden>
+    <input id="say" maxlength="80" autocomplete="off" placeholder="Enter를 누르고 말해보세요" aria-label="말풍선 내용">
+    <button>말하기</button>
+  </form>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<div id="feed" aria-live="polite" aria-label="최근 대화"></div>
+<div id="play" class="touch" hidden>
+  <div id="stick" aria-label="이동 조이스틱"><div id="knob"></div></div>
+  <div id="pads">
+    <button type="button" data-act="/poop" class="alt">똥</button>
+    <button type="button" data-act="jump">점프</button>
+    <button type="button" data-act="/clean" class="alt">치우기</button>
+    <button type="button" data-act="/eat">먹기</button>
+    <button type="button" data-act="chair" class="alt">의자</button>
+    <button type="button" data-act="scope" id="scopeBtn" hidden>조준</button>
+  </div>
+</div>
+<dialog id="logDlg" aria-labelledby="logTitle">
+  <div class="log-head"><h2 id="logTitle">대화 내역</h2><div class="board-actions"><button type="button" class="small ghost" id="clearLog">모두 지우기</button><button type="button" class="small ghost" id="closeLog">닫기</button></div></div>
+  <div id="logList"></div>
+</dialog>
+<aside class="board" id="board" aria-label="몸무게 랭킹" hidden>
+  <h2><button type="button" id="boardToggle" class="board-toggle" aria-expanded="true" aria-controls="rank">몸무게 랭킹 <span aria-hidden="true">▾</span></button></h2>
+  <ol id="rank"></ol>
+  <div class="board-actions">
+    <button type="button" class="small ghost" id="editNick">닉네임 변경</button>
+    <button type="button" class="small ghost" id="resetKg">몸무게 초기화</button>
+  </div>
+  <section id="hostPanel" class="host" hidden aria-label="접속자 관리">
+    <h3>접속자 관리 <small>(이 PC 전용)</small></h3>
+    <ul id="kickList"></ul>
+  </section>
+</aside>
+<div id="kicked" class="kicked" hidden role="alertdialog" aria-labelledby="kickedTitle">
+  <div class="kicked-card"><h2 id="kickedTitle">강퇴되었어요</h2><p>10분 뒤에 다시 들어올 수 있어요.</p></div>
+</div>
+<div id="cele" hidden aria-live="assertive"><div class="cele-card" id="celeCard"><p class="cele-big">100KG 달성!</p><p id="celeName"></p></div></div>
+<div id="join">
+  <form id="joinForm">
+    <h1 id="joinTitle">말풍선 광장</h1>
+    <p id="joinHelp">닉네임과 색깔을 고르면 내 캐릭터로 바로 들어가요.</p>
+    <input id="nick" type="text" maxlength="12" required autocomplete="nickname" placeholder="닉네임" aria-label="닉네임">
+    <fieldset id="colors"><legend>캐릭터 색깔</legend></fieldset>
+    <div class="join-actions">
+      <button type="button" class="ghost" id="cancelEdit" hidden>취소</button>
+      <button id="joinBtn">입장하기</button>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const cv = document.getElementById('cv');
+let ctx = cv.getContext('2d'); // swapped briefly to paint the floor texture
+const WORLD_W = 3124, WORLD_H = 2315, WALL = 160, CEIL = 260, SPEED = 230, JUMP_V = 480, GRAVITY = 1300, BUBBLE_MS = 7000, HURT_MS = 900;
+const COLORS = ['#ff7448', '#4f8cff', '#f2c230', '#b469e0', '#26b5a3', '#ff5c8a', '#7a5cff', '#e8833a'];
+const COLOR_NAMES = ['주황', '파랑', '노랑', '보라', '청록', '분홍', '남보라', '귤색'];
+const INK = '#22301f';
+// room walls [x, y, w, h, style]; keep in sync with WALLS in server.js
+// layout from 디자인1: a meeting room at each end (2 doors each), five desk partitions between, cabinet along the bottom
+const PARTS = [470, 760, 1050, 1340, 1630]; // partition x positions
+// the south half mirrors the north half across the drawer cabinet's centre line (y 1157.5)
+const MID = 1157.5, flipY = y => 2 * MID - y;
+const NORTH_WALLS = [
+  [300, WALL, 12, 100, 'glass'], [300, 360, 12, 400, 'glass'], [300, 860, 12, 152, 'glass'], [0, 1000, 312, 12, 'glass'], // room A, doors y 260-360 / 760-860
+  [1888, WALL, 12, 100, 'glass'], [1888, 360, 12, 400, 'glass'], [1888, 860, 12, 152, 'glass'], [1888, 1000, 312, 12, 'glass'], // room B
+  ...PARTS.map(px => [px - 4, 380, 8, 520, 'part']),
+  [560, 1135, 1300, 45, 'cabinet'],
+];
+// east of the office (by the two plants): a corridor through the east wall to the big meeting room (중회의실); not mirrored
+const EAST_WALLS = [
+  [2200, WALL, 12, 1060 - WALL], [2200, 1255, 12, flipY(WALL) - 1255], // office east wall, opening y 1060-1255
+  [2200, 1048, 824, 12], // corridor north side, straight on east to x 3024
+  [2200, 1255, 180, 12], [2480, 1255, 544, 12], // corridor's right (south) side = the room's north wall, door x 2380-2480
+  [3012, 1048, 12, 931], // corridor end + room east wall
+  [2300, 1267, 12, 700], [2300, 1967, 724, 12], // room west / south
+].map(w => [...w, 'glass']);
+const WALLS = [...NORTH_WALLS, ...NORTH_WALLS.filter(w => w[4] !== 'cabinet').map(([x, y, w, h, st]) => [x, flipY(y + h), w, h, st]), ...EAST_WALLS];
+// furniture you bump into and can jump onto: [x, y, w, d, top height]; filled while the office is built
+const SOLIDS = [], STEP = 8;
+const solid = (x, y, w, d, h) => SOLIDS.push([x, y, w, d, h]);
+let chairSolids = [], ALL_SOLIDS = SOLIDS; // ALL_SOLIDS = furniture + chairs where they currently stand
+const touching = (x, y, r = 14) => ALL_SOLIDS.filter(([sx, sy, sw, sd]) => x + r > sx && x - r < sx + sw && y + r * .45 > sy && y - r * .55 < sy + sd);
+const groundAt = (x, y, z, r) => Math.max(0, ...touching(x, y, r).filter(t => t[4] <= z + STEP).map(t => t[4])); // highest top you're on
+const blocked = (x, y, z, r, inside) => hitsWall(x, y, r) || touching(x, y, r).some(t => t[4] > z + STEP && !(inside && inside.includes(t))); // inside: what you already overlap, so you can walk out of it
+const surfaceAt = (x, y) => Math.max(0, ...ALL_SOLIDS.filter(([sx, sy, sw, sd]) => x > sx && x < sx + sw && y > sy && y < sy + sd).map(t => t[4])); // where items rest
+const DOORS = [
+  { x: 306, y1: 260, y2: 360, side: 1, label: '회의실 A' }, { x: 306, y1: 760, y2: 860, side: 1 },
+  { x: 1894, y1: 260, y2: 360, side: -1, label: '회의실 B' }, { x: 1894, y1: 760, y2: 860, side: -1 },
+];
+const hitsWall = (x, y, r = 14) => WALLS.some(([wx, wy, ww, wh, st]) => st !== 'cabinet' && /* the cabinet is a SOLID you can climb */ x + r > wx && x - r < wx + ww && y + r * .45 > wy && y - r * .55 < wy + wh);
+
+const statusEl = document.getElementById('status');
+let me = null, last = performance.now(), online = false;
+let chairOver = new Map(), chairHolder = new Map(); // chairs off their home spot (from the server); holder id -> chair id
+const hurlFx = new Map(), pendingHurls = [], throwPose = new Map(); // chair throws in flight; who just threw (arm whip)
+let charging = 0; const CHARGE_MS = 1100; // left button held with a chair: wind-up start time
+const chairNow = id => chairOver.get(id) || chairSpec.get(id);
+const chairFlying = id => [...hurlFx.values()].some(f => !f.done && f.h.c === id);
+const myChairId = () => chairHolder.get(myId) || null;
+const chargeP = () => charging ? Math.min(1, (performance.now() - charging) / CHARGE_MS) : 0;
+const hurlSpeed = p => 0.5 + 0.6 * p; // px per ms
+function refreshChairs() {
+  chairHolder = new Map([...chairOver].filter(([id, c]) => c.held && !chairFlying(id)).map(([id, c]) => [c.held, id]));
+  chairSolids = [];
+  for (const c of CHAIR_SPECS) { const st = chairNow(c.id); if (!st.held) chairSolids.push([st.x - 15, st.y - 15, 30, 30, 30]); }
+  ALL_SOLIDS = SOLIDS.concat(chairSolids);
+}
+let aiming = false; // right button held (or the phone's 조준 button) = TRG scope
+let world = {}, poops = [], snacks = [], known = null, prevKg = new Map(), floats = [], sparks = [];
+// secret id kept in this browser forever; the server only shows others its hash (myId)
+let secret = '';
+try { secret = localStorage.getItem('plaza-id') || ''; } catch {}
+if (!/^[a-z0-9]{16,40}$/.test(secret)) {
+  secret = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(36).padStart(2, '0')).join('').slice(0, 32);
+  try { localStorage.setItem('plaza-id', secret); } catch {}
+}
+let myId = null;
+let lastChat = 0, chatReady = false, chatEpoch = null;
+const chatLog = [];
+const logDlg = document.getElementById('logDlg');
+function chatLine(m, withTime) {
+  const d = document.createElement('div'); d.className = 'msg';
+  if (withTime) { const t = document.createElement('time'); t.textContent = new Date(m.t).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); d.append(t); }
+  const b = document.createElement('b'); b.textContent = m.name; b.style.setProperty('--c', m.color);
+  d.append(b, document.createTextNode(' ' + m.text));
+  return d;
+}
+function showFeed(m) {
+  const feed = document.getElementById('feed'), d = chatLine(m, false);
+  feed.append(d);
+  const live = [...feed.children].filter(c => !c.leaving);
+  if (live.length > 6) fadeOut(live[0]);
+  setTimeout(() => fadeOut(d), 7000);
+}
+// slow fade + drift up, then fold the row's height so the rest glide down instead of jumping
+function fadeOut(d) {
+  if (d.leaving || !d.isConnected) return;
+  d.leaving = true;
+  if (reduceMotion) return d.remove();
+  d.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-8px)' }], { duration: 1400, easing: 'ease-in', fill: 'forwards' })
+    .finished.then(() => {
+      const h = d.offsetHeight;
+      return d.animate([{ height: h + 'px', marginBottom: '0px' }, { height: '0px', marginBottom: '-6px', paddingTop: '0px', paddingBottom: '0px' }], { duration: 250, easing: 'ease-out', fill: 'forwards' }).finished;
+    })
+    .then(() => d.remove(), () => d.remove());
+}
+function appendLog(m, scroll) {
+  const list = document.getElementById('logList');
+  list.querySelector('.empty')?.remove();
+  list.append(chatLine(m, true));
+  if (scroll) list.scrollTop = list.scrollHeight;
+}
+const keys = new Set();
+const remote = new Map(); // id -> smoothed render state
+const stoneFx = new Map(); // stone id -> {s, start, done}
+const swingFx = new Map(); // bat swing id -> {s, start, done}
+const swingAnim = new Map(); // player id -> {start, ang} of their latest swing
+const SWING_ANIM_MS = 440, BAT_LAUNCH = 2600; // ~370px of flight (velocity decays at e^-7t)
+const hurt = new Map(); // player id -> hurt-until (local clock)
+
+// --- untrusted data sanitizing ---
+const str = (v, n) => typeof v === 'string' ? v.slice(0, n) : '';
+const num = (v, lo, hi) => Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : lo;
+const col = v => COLORS.includes(v) ? v : COLORS[0];
+
+function wrap(text, maxW) {
+  const lines = []; let line = '';
+  for (const ch of text) {
+    if (ctx.measureText(line + ch).width > maxW && line) { lines.push(line); line = ch; } else line += ch;
+  }
+  if (line) lines.push(line);
+  return lines.slice(0, 4);
+}
+
+function resize() {
+  const d = devicePixelRatio || 1;
+  cv.width = innerWidth * d; cv.height = innerHeight * d;
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+}
+addEventListener('resize', resize); resize();
+
+function setStatus(t) { statusEl.innerHTML = ''; const b = document.createElement('b'); b.textContent = t; statusEl.append(b); }
+function toast(text) {
+  const d = document.createElement('div'); d.className = 'toast'; d.textContent = text;
+  document.getElementById('toasts').append(d); setTimeout(() => d.remove(), 3200);
+}
+
+// ---- network ----
+const act = (path, body) => fetch(path + '?id=' + secret, { method: 'POST', body: body && JSON.stringify(body) }).catch(() => {});
+
+function onState(data) {
+  myId = str(data.you, 16);
+  world = data.players && typeof data.players === 'object' ? data.players : {};
+  poops = Array.isArray(data.poops) ? data.poops : [];
+  snacks = Array.isArray(data.snacks) ? data.snacks : [];
+  const ids = Object.keys(world), now = performance.now();
+  if (known) for (const id of ids) if (!known.has(id) && id !== myId) toast(`${str(world[id].name, 12)}님이 입장하였습니다`);
+  known = new Set(ids);
+  const kgNow = new Map(ids.map(id => [id, num(world[id].kg, 0, 99999)]));
+  const landsIn = new Map(); // victim id -> ms until the projectile that hit them arrives here
+  const flight = (o, speed) => Math.hypot(num(o.ex, -9e3, 9e3) - num(o.sx, -9e3, 9e3), num(o.ey, -9e3, 9e3) - num(o.sy, -9e3, 9e3)) / speed;
+  for (const o of Array.isArray(data.stones) ? data.stones : []) if (o.hit && !stoneFx.has(o.id)) landsIn.set(o.hit, Math.max(150, flight(o, STONE_SPEED)));
+  for (const o of Array.isArray(data.shots) ? data.shots : []) if (o.hit && !shotFx.has(o.id)) {
+    const mine = o.by === myId && pendingShots.length ? shotFx.get(pendingShots[0]) : null; // our own bullet left earlier
+    landsIn.set(o.hit, Math.max(0, flight(o, BULLET_SPEED) - (mine ? now - mine.start : 0)));
+  }
+  for (const o of Array.isArray(data.hurls) ? data.hurls : []) if (o.hit && !hurlFx.has(o.id)) {
+    const mine = o.by === myId && pendingHurls.length ? hurlFx.get(pendingHurls[0]) : null;
+    landsIn.set(o.hit, Math.max(0, Math.hypot(num(o.lx, 0, WORLD_W) - num(o.sx, 0, WORLD_W), num(o.ly, 0, WORLD_H) - num(o.sy, 0, WORLD_H)) / hurlSpeed(num(o.p, 0, 1)) - (mine ? now - mine.start : 0)));
+  }
+  for (const [id, kg] of kgNow) {
+    const before = prevKg.get(id);
+    if (before === undefined || kg === before) continue;
+    floats.push({ id, start: now + (kg < before ? landsIn.get(id) || 0 : 0), up: kg > before, text: (kg > before ? '+' : '') + (kg - before) + 'KG' });
+    if (before < 100 && kg >= 100) celebrate(str(world[id].name, 12), id === myId);
+  }
+  prevKg = kgNow;
+  if (me) me.kg = num(data.myKg, 0, 99999);
+  renderBoard(Array.isArray(data.ranking) ? data.ranking : []);
+  renderKick(data.host === true);
+  if (data.chatEpoch !== chatEpoch) { // history was wiped on the server (or it restarted)
+    if (chatEpoch !== null) { chatLog.length = 0; $('feed').replaceChildren(); if (logDlg.open) $('logList').replaceChildren(); }
+    chatEpoch = data.chatEpoch;
+  }
+  for (const m of Array.isArray(data.chat) ? data.chat : []) {
+    if (!(m.id > lastChat)) continue;
+    lastChat = m.id;
+    const msg = { name: str(m.name, 12), color: col(m.color), text: str(m.text, 80), t: num(m.t, 0, 9e15) };
+    chatLog.push(msg); if (chatLog.length > 200) chatLog.shift();
+    if (chatReady) { showFeed(msg); if (logDlg.open) appendLog(msg, true); }
+  }
+  chatReady = true; // messages from before we arrived go to chatLog only, not the feed
+  const live = new Set();
+  for (const s of Array.isArray(data.stones) ? data.stones : []) {
+    live.add(s.id);
+    if (!stoneFx.has(s.id)) stoneFx.set(s.id, { s, start: now, done: false });
+  }
+  for (const [k, f] of stoneFx) if (!live.has(k) && f.done) stoneFx.delete(k);
+  const liveSwings = new Set();
+  for (const s of Array.isArray(data.swings) ? data.swings : []) {
+    liveSwings.add(s.id);
+    if (!swingFx.has(s.id)) swingFx.set(s.id, { s, start: now, done: false });
+  }
+  for (const [k, f] of swingFx) if (!liveSwings.has(k) && f.done) swingFx.delete(k);
+  const liveShots = new Set();
+  for (const s of Array.isArray(data.shots) ? data.shots : []) {
+    liveShots.add(s.id);
+    if (shotFx.has(s.id)) continue;
+    // our own shot is already flying (fired the moment we clicked): give it the server's real end point and hit
+    while (pendingShots.length && !(now - shotFx.get(pendingShots[0])?.start < 2000)) pendingShots.shift();
+    const own = s.by === myId && pendingShots.length ? shotFx.get(pendingShots.shift()) : null;
+    if (own) { own.s = s; own.retarget = true; shotFx.set(s.id, { done: true, line: null }); }
+    else shotFx.set(s.id, { s, start: now, done: false, line: null });
+  }
+  for (const [k, f] of shotFx) if (!liveShots.has(k) && f.done && !f.line) shotFx.delete(k);
+  chairOver = new Map((Array.isArray(data.chairs) ? data.chairs : []).filter(c => chairSpec.has(c.id)).map(c =>
+    [c.id, { x: num(c.x, 0, WORLD_W), y: num(c.y, 0, WORLD_H), r: Number.isFinite(c.r) ? c.r : null, pose: num(c.pose, 0, 4) | 0, held: typeof c.held === 'string' ? c.held : null }]));
+  const liveHurls = new Set();
+  for (const h of Array.isArray(data.hurls) ? data.hurls : []) {
+    liveHurls.add(h.id);
+    if (hurlFx.has(h.id)) continue;
+    while (pendingHurls.length && !(now - hurlFx.get(pendingHurls[0])?.start < 2000)) pendingHurls.shift();
+    const own = h.by === myId && pendingHurls.length ? hurlFx.get(pendingHurls.shift()) : null;
+    if (own) { own.h = h; own.retarget = true; hurlFx.set(h.id, { done: true }); } // our throw already left: land it where the server says
+    else { hurlFx.set(h.id, { h, start: now, done: false }); throwPose.set(h.by, now); }
+  }
+  for (const [k, f] of hurlFx) if (!liveHurls.has(k) && f.done) hurlFx.delete(k);
+  refreshChairs();
+  setStatus(`접속 ${ids.length}명`);
+}
+
+// one request in flight at a time, ~10x/s
+(async function poll() {
+  try {
+    const r = await fetch('/state?id=' + secret + '&since=' + lastChat, { cache: 'no-store' });
+    if (r.status === 403) { // kicked: show the notice and stop talking to the server
+      me = null; keys.clear();
+      for (const id of ['play', 'chat', 'board', 'join']) $(id).hidden = true;
+      $('kicked').hidden = false; setStatus('강퇴됨');
+      return;
+    }
+    if (!r.ok) throw 0;
+    onState(await r.json());
+    if (!online) sent = ''; // resend our state after a reconnect
+    online = true;
+  } catch { online = false; setStatus('다시 연결 중…'); }
+  setTimeout(poll, online ? 100 : 1000);
+})();
+
+// send at most ~15x/s, only when something changed
+let sent = '', sending = false, lastPost = 0;
+function sendPresence() {
+  if (!online || !me || sending || performance.now() - lastPost < 66) return;
+  const p = { name: me.name, color: me.color, x: Math.round(me.x), y: Math.round(me.y), z: Math.round(me.z), f: me.f, say: me.say, sayAt: me.sayAt, ai: me.ai ? 1 : 0, a: +me.a.toFixed(2), ch: +(me.ch || 0).toFixed(2) };
+  const k = JSON.stringify(p);
+  if (k === sent) return;
+  sending = true; lastPost = performance.now();
+  fetch('/state?id=' + secret, { method: 'POST', body: k })
+    .then(r => { if (r.ok) sent = k; })
+    .catch(() => {}).finally(() => { sending = false; });
+}
+
+// ---- join ----
+let savedColor = COLORS[(Math.random() * COLORS.length) | 0];
+try { savedColor = col(localStorage.getItem('plaza-color') || savedColor); document.getElementById('nick').value = localStorage.getItem('plaza-nick') || ''; } catch {}
+const colorsEl = document.getElementById('colors');
+COLORS.forEach((c, i) => {
+  const l = document.createElement('label'); l.className = 'sw';
+  l.innerHTML = `<input type="radio" name="color" id="color-${i}" value="${c}" aria-label="${COLOR_NAMES[i]}"><span style="background:${c}"></span>`;
+  l.querySelector('input').checked = c === savedColor;
+  colorsEl.append(l);
+});
+
+const joinEl = document.getElementById('join'), $ = id => document.getElementById(id);
+document.getElementById('joinForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('nick').value.trim().slice(0, 12);
+  if (!name) return;
+  const color = col(document.querySelector('input[name=color]:checked')?.value);
+  try { localStorage.setItem('plaza-nick', name); localStorage.setItem('plaza-color', color); } catch {}
+  joinEl.hidden = true;
+  if (me) { me.name = name; me.color = color; sendPresence(); toast('닉네임을 바꿨어요'); return; } // editing keeps the same id and weight
+  me = { name, color, x: 1050 + (Math.random() - .5) * 300, y: 1020 + (Math.random() - .5) * 60, z: 0, vz: 0, kx: 0, ky: 0, f: 1, say: '', sayAt: 0, kg: 0, ai: false, a: 0 };
+  $('chat').hidden = false; $('board').hidden = false; $('play').hidden = false;
+  cv.classList.add('playing');
+  toast(`${name}님이 입장하였습니다`);
+  sendPresence();
+});
+$('editNick').addEventListener('click', () => {
+  $('joinTitle').textContent = '닉네임 변경'; $('joinHelp').textContent = '몸무게는 그대로 유지돼요.';
+  $('joinBtn').textContent = '저장'; $('cancelEdit').hidden = false;
+  $('nick').value = me.name;
+  document.querySelector(`input[name=color][value="${me.color}"]`).checked = true;
+  joinEl.hidden = false; keys.clear(); $('nick').focus();
+});
+$('cancelEdit').addEventListener('click', () => { joinEl.hidden = true; });
+$('resetKg').addEventListener('click', () => {
+  if (!confirm('내 몸무게를 0KG로 초기화할까요? 되돌릴 수 없어요.')) return;
+  act('/reset').then(() => toast('몸무게를 0KG로 초기화했어요'));
+});
+
+// ---- ranking panel folds; folded by default on touch screens so it doesn't cover the game ----
+function setBoard(open) { $('board').classList.toggle('min', !open); $('boardToggle').setAttribute('aria-expanded', open); }
+setBoard(!matchMedia('(pointer:coarse)').matches);
+$('boardToggle').addEventListener('click', () => setBoard($('board').classList.contains('min')));
+
+// ---- kick (host only: the server says whether this view is on the host PC, and enforces it) ----
+let kickKey = '';
+function renderKick(isHost) {
+  $('hostPanel').hidden = !isHost;
+  if (!isHost) return;
+  const rows = Object.entries(world).filter(([id]) => id !== myId).map(([id, p]) => [id, str(p.name, 12)]);
+  const key = JSON.stringify(rows);
+  if (key === kickKey) return; // only rebuild when people change, so buttons don't vanish mid-click
+  kickKey = key;
+  const ul = $('kickList'); ul.replaceChildren();
+  if (!rows.length) { const li = document.createElement('li'); li.textContent = '다른 접속자가 없어요'; ul.append(li); return; }
+  for (const [id, name] of rows) {
+    const li = document.createElement('li'), s = document.createElement('span'), b = document.createElement('button');
+    s.textContent = name; b.type = 'button'; b.className = 'small'; b.textContent = '강퇴';
+    b.addEventListener('click', () => { if (confirm(`${name}님을 강퇴할까요? 10분 동안 못 들어와요.`)) act('/kick', { target: id }); });
+    li.append(s, b); ul.append(li);
+  }
+}
+
+// ---- chat history dialog ----
+$('openLog').addEventListener('click', () => {
+  const list = $('logList'); list.replaceChildren();
+  if (!chatLog.length) { const p = document.createElement('p'); p.className = 'empty'; p.textContent = '아직 대화가 없어요'; list.append(p); }
+  chatLog.forEach(m => appendLog(m, false));
+  keys.clear(); logDlg.showModal(); list.scrollTop = list.scrollHeight;
+});
+$('closeLog').addEventListener('click', () => logDlg.close());
+$('keysBtn').addEventListener('click', e => { const open = $('keysHelp').hidden; $('keysHelp').hidden = !open; e.currentTarget.setAttribute('aria-expanded', open); e.currentTarget.blur(); });
+$('clearLog').addEventListener('click', () => {
+  if (!confirm('모든 사람의 대화 내역을 지울까요? 되돌릴 수 없어요.')) return;
+  act('/clear-chat').then(() => toast('대화 내역을 지웠어요'));
+});
+
+// ---- ranking (everyone with weight, online or not; the server ranks it) ----
+function renderBoard(rows) {
+  if (!me) return;
+  const ol = $('rank'); ol.replaceChildren();
+  if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = '아직 아무도 없어요'; ol.append(li); return; }
+  for (const raw of rows) {
+    const r = { id: str(raw.id, 16), name: str(raw.name, 12), color: col(raw.color), kg: num(raw.kg, 0, 99999), rank: num(raw.rank, 1, 1e6), online: raw.online === true };
+    const li = document.createElement('li'); li.className = (r.id === myId ? 'me' : '') + (r.online ? '' : ' off');
+    li.title = r.online ? '접속 중' : '오프라인';
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = r.rank;
+    const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = r.color;
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = r.name;
+    const kg = document.createElement('span'); kg.className = 'kg'; kg.textContent = r.kg + 'KG';
+    li.append(n, dot, nm, kg); ol.append(li);
+  }
+}
+
+// ---- 100KG celebration ----
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let celeTimer = 0;
+function celebrate(name, mine) {
+  $('celeName').textContent = mine ? '축하해요! 드디어 100KG!' : `${name}님이 100KG를 달성했어요!`;
+  const card = $('celeCard'); $('cele').hidden = false;
+  card.style.animation = 'none'; void card.offsetWidth; card.style.animation = ''; // restart the fade
+  clearTimeout(celeTimer); celeTimer = setTimeout(() => { $('cele').hidden = true; }, 4600);
+  if (reduceMotion) return;
+  for (let b = 0; b < 7; b++) setTimeout(() => {
+    const x = innerWidth * (.15 + Math.random() * .7), y = innerHeight * (.15 + Math.random() * .4), start = performance.now();
+    for (let i = 0; i < 46; i++) {
+      const a = Math.random() * Math.PI * 2, v = 120 + Math.random() * 220;
+      sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, c: COLORS[(Math.random() * COLORS.length) | 0], start });
+    }
+  }, b * 320);
+}
+function drawSparks(now, dt) {
+  sparks = sparks.filter(s => now - s.start < 1500);
+  for (const s of sparks) {
+    s.vy += 260 * dt; s.x += s.vx * dt; s.y += s.vy * dt;
+    ctx.globalAlpha = 1 - (now - s.start) / 1500; ctx.fillStyle = s.c;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ---- input ----
+const sayEl = document.getElementById('say');
+document.getElementById('chat').addEventListener('submit', e => {
+  e.preventDefault();
+  const t = sayEl.value.trim().slice(0, 80);
+  if (t && me) { me.say = t; me.sayAt = Date.now(); me.saidLocal = performance.now(); sendPresence(); act('/say', { text: t }); }
+  sayEl.value = ''; sayEl.blur();
+});
+
+const ACTIONS = { KeyF: '/poop', KeyR: '/clean', KeyE: '/eat' };
+const typing = () => document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName);
+addEventListener('keydown', e => {
+  if (!me) return;
+  if (!joinEl.hidden) { if (e.code === 'Escape') joinEl.hidden = true; return; } // nickname dialog open
+  if (logDlg.open) return;
+  if (typing()) { if (e.code === 'Escape') sayEl.blur(); return; }
+  if (e.code === 'Enter') { e.preventDefault(); document.exitPointerLock?.(); sayEl.focus(); return; }
+  if (e.code === 'KeyX') { if (!e.repeat) chairKey(); return; }
+  if (ACTIONS[e.code]) { if (!e.repeat) act(ACTIONS[e.code]); return; }
+  if (e.code === 'Space') e.preventDefault();
+  keys.add(e.code); // e.code works even when the Korean IME is on
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => { keys.clear(); aiming = false; });
+sayEl.addEventListener('focus', () => keys.clear());
+const myRifle = () => num(world[myId]?.rifle, 0, 99);
+// PUBG-style: the mouse turns the camera (pointer lock), W walks where you look, the screen centre is the crosshair
+let lastShotAt = 0, kick = 0; const SHOT_COOLDOWN = 720, pendingShots = []; // our bullets waiting for the server's echo
+let yaw = -Math.PI / 2, look = 0.12, sens = 1; // sens = the 감도 slider
+try { sens = num(+localStorage.getItem('plaza-sens') || 1, 0.2, 2); } catch {}
+$('sens').value = sens;
+$('sens').addEventListener('input', e => { sens = num(+e.target.value, 0.2, 2); try { localStorage.setItem('plaza-sens', sens); } catch {} });
+$('sens').addEventListener('change', e => e.target.blur()); // give WASD back // yaw = heading on the floor, look = how far the view tilts down
+const locked = () => document.pointerLockElement === cv;
+function turn(dx, dy) {
+  const k = (me && me.ai ? 0.00025 : 0.0009) * sens; // finer through the scope
+  yaw += dx * k; look = num(look + dy * k, -0.6, 1.2);
+}
+function nearestChair() {
+  let best = null, bd = 54 + 19 * (sizeOf(me.kg) - 1);
+  for (const c of CHAIR_SPECS) {
+    const st = chairNow(c.id);
+    if (st.held || chairFlying(c.id)) continue;
+    const d = Math.hypot(st.x - me.x, st.y - me.y);
+    if (d < bd) { bd = d; best = c.id; }
+  }
+  return best;
+}
+function chairKey() { // X: grab the nearest chair, or set yours down
+  if (!me) return;
+  if (myChairId()) { charging = 0; return act('/drop'); }
+  const id = nearestChair(); if (!id) return;
+  act('/grab', { id }).then(r => { // show it in your hands right away instead of waiting for the next poll
+    if (!r || !r.ok || !me) return;
+    const st = chairNow(id); chairOver.set(id, { x: st.x, y: st.y, r: st.r ?? null, held: myId }); refreshChairs();
+  });
+}
+function hurl() { // release: the chair leaves your hands now; the server's landing spot and hit arrive a moment later
+  const pw = chargeP(); charging = 0;
+  const cid = myChairId(); if (!me || !cid) return;
+  // thrown straight at the crosshair; the wind-up is the speed, so a harder throw flies flatter and farther. Gravity does the rest.
+  const h0 = Math.round(me.z + 50 * sizeOf(me.kg)), v = (140 + 460 * pw) / 10, target = aimAt(h0), sl = target.sl;
+  const t = performance.now(), dx = target.x - me.x, dy = target.y - me.y, d = Math.hypot(dx, dy) || 1;
+  const range = (sl * v * v + v * Math.sqrt(sl * sl * v * v + 2 * h0 * (1 + sl * sl))) / (1 + sl * sl); // where the arc meets the floor; the server adds walls
+  const id = 'H' + t;
+  hurlFx.set(id, { h: { by: myId, c: cid, p: pw, sx: me.x, sy: me.y, lx: me.x + dx / d * range, ly: me.y + dy / d * range, ex: me.x + dx / d * range, ey: me.y + dy / d * range,
+    r: Math.PI / 2 - me.a, pose: 0, wall: 0, hit: null, h0, sl, v }, start: t, done: false });
+  pendingHurls.push(id); throwPose.set(myId, t);
+  const st = chairNow(cid); chairOver.set(cid, { ...st, held: null }); refreshChairs();
+  act('/hurl', { x: target.x, y: target.y, p: +pw.toFixed(2), sl }).then(r => {
+    if (r && r.ok) return;
+    const f = hurlFx.get(id); if (f) f.done = true; // refused: the next poll puts the chair back in your hands
+    pendingHurls.splice(pendingHurls.indexOf(id) >>> 0, 1);
+  });
+}
+// what the crosshair points at, in 3D: the screen-centre ray until it reaches body height (looking down), the ceiling
+// (looking up), or 3000 away. Returns that spot on the floor plan and the up/down slope from height h0 above you to it,
+// so a throw leaves your hand heading exactly where the crosshair is.
+const STONE_V = 28.3, STONE_SPEED = 1.5, ARC_MAX = 0.35; // stone launch speed (same as the server), flight speed px/ms, most it aims above the crosshair
+function aimAt(h0) {
+  ray.setFromCamera({ x: 0, y: 0 }, camera);
+  const o = ray.ray.origin, d = ray.ray.direction, hz = Math.hypot(d.x, d.z) || 1e-6;
+  let t = 3000 / hz;
+  if (d.y < -1e-4 && o.y > 24) t = Math.min(t, (o.y - 24) / -d.y);
+  if (d.y > 1e-4 && o.y < CEIL) t = Math.min(t, (CEIL - o.y) / d.y);
+  const px = o.x + d.x * t, py = o.z + d.z * t, ph = o.y + d.y * t, ca = Math.cos(yaw), sa = Math.sin(yaw);
+  if ((px - me.x) * ca + (py - me.y) * sa < 30) return { x: Math.round(me.x + ca * 60), y: Math.round(me.y + sa * 60), sl: num((ph - h0) / 30, -3, 3) }; // at your own feet
+  return { x: Math.round(px), y: Math.round(py), sl: +num((ph - h0) / Math.hypot(px - me.x, py - me.y), -3, 3).toFixed(4) };
+}
+function fire() {
+  if (!me) return;
+  const target = crosshairTarget();
+  if (me.ai) {
+    const t = performance.now();
+    if (t - lastShotAt < SHOT_COOLDOWN) return; // same gap the server enforces, so every bullet you see is real
+    lastShotAt = t; kick = 0.035; // the view jumps up a little and springs back
+    const id = 'L' + t, d = Math.hypot(target.x - me.x, target.y - me.y) || 1;
+    const sl = +(camDir.y / (Math.hypot(camDir.x, camDir.z) || 1)).toFixed(4); // rise per unit of floor distance, straight from the scope
+    shotFx.set(id, { s: { by: myId, sx: me.x, sy: me.y, ex: me.x + (target.x - me.x) / d * 2600, ey: me.y + (target.y - me.y) / d * 2600, hit: null, sl },
+      scoped: true, start: t, done: false, line: null });
+    target.sl = sl;
+    pendingShots.push(id);
+    return act('/shoot', target).then(r => { if (!r || !r.ok) { cancelShot(shotFx.get(id)); pendingShots.splice(pendingShots.indexOf(id) >>> 0, 1); } });
+  }
+  if (num(world[myId]?.bat, 0, 99) > 0) return act('/swing', target); // holding a bat replaces stones
+  // a stone is lobbed: aimed a little above the crosshair so its arc comes down on it (the exact arc when it's in reach,
+  // never more than ARC_MAX above where you look, so looking straight ahead never sends it into the ceiling)
+  const h0 = me.z + 30 * sizeOf(me.kg), a = aimAt(h0), D = Math.max(40, Math.hypot(a.x - me.x, a.y - me.y));
+  const A = D * D / (2 * STONE_V * STONE_V), disc = D * D - 4 * A * (a.sl * D + A), lob = disc >= 0 ? (D - Math.sqrt(disc)) / (2 * A) : Infinity;
+  a.sl = +Math.min(lob, a.sl + ARC_MAX).toFixed(4);
+  act('/throw', a);
+}
+// mousedown, not pointerdown: a second button pressed while one is held gives no new pointerdown
+cv.addEventListener('mousedown', e => {
+  if (!me) return;
+  sayEl.blur();
+  if (!locked()) { cv.requestPointerLock?.(); return; } // the first click only grabs the mouse
+  if (myChairId()) { if (e.button === 0) charging = performance.now(); return; } // holding a chair: left button winds up
+  if (e.button === 2) aiming = !aiming; else if (e.button === 0) fire(); // right click flips the scope on/off
+});
+document.addEventListener('pointerlockchange', () => { if (!locked()) { aiming = false; charging = 0; } });
+addEventListener('mouseup', e => { if (e.button === 0 && charging) hurl(); });
+addEventListener('mousemove', e => { if (locked()) turn(e.movementX, e.movementY); });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('wheel', e => { e.preventDefault(); camDist = num(camDist * Math.exp(e.deltaY * 0.001), 70, 700); }, { passive: false });
+// touch: drag on the view to turn, tap to throw / swing / fire
+const drag = { id: null, x: 0, y: 0, moved: 0, t: 0 };
+cv.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' || drag.id !== null) return;
+  e.preventDefault(); Object.assign(drag, { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0, t: performance.now() });
+  if (myChairId()) charging = performance.now(); // phones: press and hold anywhere to wind up
+});
+cv.addEventListener('pointermove', e => {
+  if (e.pointerId !== drag.id) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy); turn(dx * 1.6, dy * 1.6);
+});
+const endDrag = e => {
+  if (e.pointerId !== drag.id) return;
+  drag.id = null;
+  if (charging) { hurl(); return; }
+  if (drag.moved < 12 && performance.now() - drag.t < 350) { sayEl.blur(); fire(); }
+};
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+
+// ---- touch controls ----
+const stick = { on: false, x: 0, y: 0, pid: null };
+let jumpTap = false;
+const stickEl = $('stick'), knob = $('knob');
+function moveStick(e) {
+  const r = stickEl.getBoundingClientRect(), R = r.width / 2;
+  let x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R;
+  const l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+  const dead = l < .18; // ignore tiny thumb wobble
+  stick.x = dead ? 0 : x; stick.y = dead ? 0 : y;
+  knob.style.transform = `translate(${x * R * .6}px, ${y * R * .6}px)`;
+}
+stickEl.addEventListener('pointerdown', e => { e.preventDefault(); stick.on = true; stick.pid = e.pointerId; stickEl.setPointerCapture(e.pointerId); moveStick(e); });
+stickEl.addEventListener('pointermove', e => { if (stick.on && e.pointerId === stick.pid) moveStick(e); });
+const endStick = e => { if (e.pointerId !== stick.pid) return; stick.on = false; stick.x = stick.y = 0; knob.style.transform = ''; };
+stickEl.addEventListener('pointerup', endStick); stickEl.addEventListener('pointercancel', endStick);
+for (const b of document.querySelectorAll('#pads button')) b.addEventListener('pointerdown', e => {
+  e.preventDefault(); sayEl.blur();
+  if (b.dataset.act === 'jump') jumpTap = true; else if (b.dataset.act === 'scope') aiming = !aiming; else if (b.dataset.act === 'chair') chairKey(); else act(b.dataset.act);
+});
+
+function update(dt) {
+  if (!me) return;
+  const fwd = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0), side = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
+  const len = Math.hypot(fwd, side) || 1;
+  const f = stick.on ? -stick.y : fwd / len, s = stick.on ? stick.x : side / len; // joystick is analog
+  me.a = Math.atan2(Math.sin(yaw), Math.cos(yaw)); me.f = Math.cos(yaw) < 0 ? -1 : 1; // you always face where you look
+  const wasScoped = me.ai;
+  me.ai = aiming && myRifle() > 0 && !myChairId(); // no scope with a chair over your head
+  me.ch = chargeP();
+  if (me.ai && !wasScoped) { // the scope opens on whatever the shoulder crosshair was on
+    const t = crosshairTarget();
+    yaw = Math.atan2(t.y - me.y, t.x - me.x);
+    look = Math.atan2(me.z + 36 * sizeOf(me.kg) - 24, Math.hypot(t.x - me.x, t.y - me.y));
+  }
+  const k = me.ai ? .4 : 1; // creep while scoped
+  const ca = Math.cos(yaw), sa = Math.sin(yaw), vx = (ca * f - sa * s) * k, vy = (sa * f + ca * s) * k; // right = (-sin, cos)
+  // move each axis separately so you slide along walls instead of sticking
+  const pr = Math.min(30, 14 * sizeOf(me.kg)); // your body's half-width for bumping into things
+  const nx = num(me.x + (vx * SPEED + me.kx) * dt, 30, WORLD_W - 30);
+  const inside = touching(me.x, me.y, pr);
+  if (!blocked(nx, me.y, me.z, pr, inside)) me.x = nx; else me.kx = 0;
+  const ny = num(me.y + (vy * SPEED + me.ky) * dt, WALL + 30, WORLD_H - WALL - 30);
+  if (!blocked(me.x, ny, me.z, pr, inside)) me.y = ny; else me.ky = 0;
+  const decay = Math.exp(-7 * dt); me.kx *= decay; me.ky *= decay;
+  const ground = groundAt(me.x, me.y, me.z, pr);
+  if ((keys.has('Space') || jumpTap) && me.z <= ground + .5) me.vz = JUMP_V;
+  jumpTap = false;
+  me.vz -= GRAVITY * dt; me.z = Math.max(ground, me.z + me.vz * dt); if (me.z === ground && me.vz < 0) me.vz = 0;
+  sendPresence();
+}
+
+// stones fly ~900px/s; the hit lands (grimace + knockback) when the stone arrives
+function stoneStep(now) {
+  const out = [];
+  for (const f of stoneFx.values()) {
+    const s = f.s, dist = Math.hypot(s.ex - s.sx, s.ey - s.sy), dur = Math.max(120, dist / STONE_SPEED);
+    const p = (now - f.start) / dur;
+    if (p >= 1 && !f.done) {
+      f.done = true;
+      if (s.hit) {
+        hurt.set(s.hit, now + HURT_MS);
+        if (s.hit === myId && me) { const d = dist || 1; me.kx = (s.ex - s.sx) / d * 650; me.ky = (s.ey - s.sy) / d * 650; }
+      }
+    }
+    // along the thrown line (a little arc on top); one that stopped in mid-air (hit someone) drops to the floor after
+    // the same gravity curve the server used; if it stopped in mid-air (hit someone, a wall) it drops from there, speeding up
+    const q = Math.min(p, 1), sl = num(s.sl, -3, 3), v = num(s.v, 0, 1000), h0 = num(s.h0, 0, 400);
+    const arc = d => v ? Math.max(0, h0 + sl * d - (1 + sl * sl) * d * d / (2 * v * v)) : h0 + sl * d;
+    const h = !Number.isFinite(s.sl) ? (p < 1 ? 30 + Math.sin(Math.PI * p) * 40 : 0) : p < 1 ? arc(dist * q) : arc(dist) * Math.max(0, 1 - ((p - 1) / .4) ** 2);
+    if (p < 1.4) out.push({ id: s.id, x: s.sx + (s.ex - s.sx) * q, y: s.sy + (s.ey - s.sy) * q, lift: Math.max(0, h - 6) });
+  }
+  return out;
+}
+
+// bat swings: the arm animates for everyone; whoever got hit flies back and up once the bat connects
+function swingStep(now) {
+  for (const f of swingFx.values()) {
+    const s = f.s;
+    if (!swingAnim.has(s.by) || swingAnim.get(s.by).id !== s.id) swingAnim.set(s.by, { id: s.id, start: f.start, ang: Math.atan2(num(s.dy, -1, 1), num(s.dx, -1, 1)) });
+    if (f.done || now - f.start < SWING_ANIM_MS * .53) continue;
+    f.done = true;
+    for (const h of Array.isArray(s.hits) ? s.hits : []) {
+      hurt.set(h, now + HURT_MS * 1.5);
+      if (h === myId && me) {
+        let dx = me.x - s.x, dy = me.y - s.y; const d = Math.hypot(dx, dy);
+        if (d < 1) { dx = s.dx; dy = s.dy; } else { dx /= d; dy /= d; }
+        me.kx = dx * BAT_LAUNCH; me.ky = dy * BAT_LAUNCH; me.vz = 650;
+      }
+    }
+  }
+}
+
+function collectPlayers(now) {
+  const list = [];
+  const seen = new Set();
+  for (const [id, s] of Object.entries(world)) {
+    if (id === myId) continue;
+    const name = str(s.name, 12);
+    if (!name) continue;
+    seen.add(id);
+    const tx = num(s.x, 0, WORLD_W), ty = num(s.y, 0, WORLD_H), tz = num(s.z, 0, 400);
+    let r = remote.get(id);
+    if (!r) { r = { x: tx, y: ty, z: tz }; remote.set(id, r); }
+    const k = 0.25; r.x += (tx - r.x) * k; r.y += (ty - r.y) * k; r.z += (tz - r.z) * k;
+    const say = str(s.say, 80), sayAt = num(s.sayAt, 0, 9e15);
+    if (sayAt !== r.sayAt) { r.sayAt = sayAt; r.saidLocal = now; } // timed on our clock, not theirs
+    list.push({ id, name, color: col(s.color), x: r.x, y: r.y, z: r.z, f: s.f === -1 ? -1 : 1, kg: num(s.kg, 0, 9999), bat: num(s.bat, 0, 99),
+      rifle: num(s.rifle, 0, 99), ai: s.ai === 1, a: num(s.a, -4, 4), chair: chairHolder.get(id), ch: num(s.ch, 0, 1),
+      say: now - r.saidLocal < BUBBLE_MS ? say : '', hurt: (hurt.get(id) || 0) > now });
+  }
+  for (const k of remote.keys()) if (!seen.has(k)) remote.delete(k);
+  if (me) list.push({ ...me, id: myId, mine: true, bat: num(world[myId]?.bat, 0, 99), rifle: myRifle(), chair: myChairId(), ch: chargeP(), say: now - (me.saidLocal || -1e9) < BUBBLE_MS ? me.say : '', hurt: (hurt.get(myId) || 0) > now });
+  return list;
+}
+const sizeOf = kg => 1 + (kg || 0) * 0.012; // +1.2% per KG, no cap (2.2x at 100KG)
+
+// ---- 2D helpers, still used for the floor/back-wall texture and the text overlay ----
+function box(x, y, w, h, fill, r = 4) {
+  ctx.fillStyle = fill; ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill(); ctx.stroke();
+}
+function disc(x, y, rx, ry, fill, stroke = true) {
+  ctx.fillStyle = fill; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 7); ctx.fill();
+  if (stroke) { ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke(); }
+}
+function planks(x0, y0, w, h, fill, line, rowH, len) {
+  ctx.fillStyle = fill; ctx.fillRect(x0, y0, w, h);
+  ctx.strokeStyle = line; ctx.lineWidth = 1.5; ctx.beginPath();
+  for (let y = y0, row = 0; y < y0 + h; y += rowH, row++) {
+    ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y);
+    for (let x = x0 + (row % 3) * len / 3; x < x0 + w; x += len) { ctx.moveTo(x, y); ctx.lineTo(x, Math.min(y + rowH, y0 + h)); }
+  }
+  ctx.stroke();
+}
+// floor (y >= WALL) and back-wall picture (y < WALL) as one 2D image; it becomes the 3D floor and wall textures
+function drawWorld() {
+  for (let x = 0; x < WORLD_W; x += 64) for (let y = WALL; y < WORLD_H; y += 64) {
+    ctx.fillStyle = ((x + y) / 64) % 2 ? '#d2d7de' : '#d9dde3'; ctx.fillRect(x, y, 64, 64);
+  }
+  for (const rx of [0, 1900]) { // meeting rooms: oak floor + rug under the long table
+    planks(rx, WALL, 300, 840, '#e2c79b', '#cfae7a', 26, 110);
+    ctx.fillStyle = '#5d6f86'; ctx.beginPath(); ctx.roundRect(rx + 36, 340, 228, 610, 20); ctx.fill();
+    ctx.strokeStyle = '#8193a8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(rx + 48, 352, 204, 586, 14); ctx.stroke();
+  }
+  for (const d of DOORS) box(d.side > 0 ? d.x + 8 : d.x - 30, d.y1 + 12, 22, d.y2 - d.y1 - 24, '#6c7a89', 6); // door mats
+  ctx.fillStyle = '#ebe5d8'; ctx.fillRect(0, 0, WORLD_W, WALL);
+  ctx.fillStyle = '#e1d6c2'; ctx.fillRect(0, 0, 312, WALL); ctx.fillRect(1888, 0, 312, WALL); // rooms' own paint
+  ctx.fillStyle = '#8f8676'; ctx.fillRect(0, WALL - 12, WORLD_W, 12);
+  for (const x of [380, 600, 1480, 1700]) { box(x, 28, 150, 86, '#bfe3ff', 3); ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(x + 75, 30); ctx.lineTo(x + 75, 112); ctx.stroke(); }
+  box(860, 30, 260, 90, '#fbfbf8', 3); // whiteboard
+  ctx.strokeStyle = '#4f8cff'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(880, 60); ctx.bezierCurveTo(920, 40, 960, 85, 1010, 55); ctx.stroke();
+  ctx.strokeStyle = '#ff5c8a'; ctx.beginPath(); ctx.moveTo(885, 95); ctx.lineTo(1080, 95); ctx.stroke();
+  disc(1300, 75, 26, 26, '#fffdf5'); // clock
+  ctx.beginPath(); ctx.moveTo(1300, 75); ctx.lineTo(1300, 57); ctx.moveTo(1300, 75); ctx.lineTo(1314, 81); ctx.stroke();
+  for (const rx of [30, 1930]) { // a TV with a chart in each room
+    box(rx, 22, 240, 118, '#1d2430', 8); ctx.fillStyle = '#26324a'; ctx.fillRect(rx + 10, 32, 220, 98);
+    [40, 62, 50, 80, 70].forEach((h, i) => { ctx.fillStyle = i === 3 ? '#ff7448' : '#4f8cff'; ctx.fillRect(rx + 26 + i * 40, 120 - h, 24, h); });
+  }
+}
+
+// ---- 3D scene (Three.js). A world point (x, y) on the floor at height z is three's (x, z, y) ----
+const coarse = matchMedia('(pointer:coarse)').matches;
+let gl = null;
+try { gl = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: !coarse }); } catch {}
+if (!gl) { // no WebGL: point them at the flat version
+  $('nogl').hidden = false;
+}
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#b8bec6');
+const camera = new THREE.PerspectiveCamera(60, 1, 2, 8000);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa3ad, 0.72));
+const sun = new THREE.DirectionalLight(0xffffff, 0.42); sun.position.set(-0.5, 1, 0.7); scene.add(sun);
+const mats = new Map();
+const mat = (c, o) => { // shared materials, so removing a mesh never needs disposing
+  const k = c + '/' + (o || 1);
+  if (!mats.has(k)) mats.set(k, new THREE.MeshLambertMaterial(o ? { color: c, transparent: true, opacity: o, depthWrite: false } : { color: c }));
+  return mats.get(k);
+};
+const BOX = new THREE.BoxGeometry(1, 1, 1), BALL = new THREE.SphereGeometry(1, 20, 14), CYL = new THREE.CylinderGeometry(1, 1, 1, 20);
+const TORUS = new THREE.TorusGeometry(7, 3.5, 10, 24), RING = new THREE.RingGeometry(0.8, 1, 32), DISC = new THREE.CircleGeometry(1, 24);
+const INK_HULL = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide, visible: false }); // outline turned off
+const SHADOW = new THREE.MeshBasicMaterial({ color: INK, transparent: true, opacity: .2, depthWrite: false });
+const GLOW = { gold: new THREE.MeshBasicMaterial({ color: '#ffd65a', transparent: true, opacity: .7, side: THREE.DoubleSide, depthWrite: false }),
+  white: new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: .8, side: THREE.DoubleSide, depthWrite: false }) };
+// geo stretched to (sx, height sy, sz), centred at floor point (x, y) and height h
+let building = scene; // where static pieces go: the north half's group while it's built
+function put(geo, c, x, y, h, sx, sy, sz, parent = building, o) {
+  const m = new THREE.Mesh(geo, typeof c === 'string' ? mat(c, o) : c);
+  m.position.set(x, h, y); m.scale.set(sx, sy, sz); (parent || building).add(m); return m;
+}
+// a box by footprint x..x+w, y..y+d, from height z0 up h
+const block = (x, y, w, d, z0, h, c, parent, o) => put(BOX, c, x + w / 2, y + d / 2, z0 + h / 2, w, h, d, parent, o);
+function flat(geo, material, x, y, h, r, parent = scene) { const m = new THREE.Mesh(geo, material); m.rotation.x = -Math.PI / 2; m.position.set(x, h, y); m.scale.set(r, r, 1); parent.add(m); return m; }
+
+// ---- static office ----
+// chairs are separate objects (they can be picked up and thrown): the layout only registers where each one stands
+const CHAIR_SPECS = [], chairSpec = new Map(), chairMeshes = new Map(); // id "x_y" of its home spot
+const BACK_ROT = { n: 0, s: Math.PI, e: -Math.PI / 2, w: Math.PI / 2 }; // which side the backrest is on
+function chair(x, y, back, c = '#3c4a5c') { CHAIR_SPECS.push({ id: `${x}_${y}`, x, y, rot: BACK_ROT[back], c }); }
+function chairModel(c) { // origin at the floor under the base; backrest on the -z side
+  const g = new THREE.Group();
+  put(CYL, '#2b3440', 0, 0, 2, 14, 3, 14, g); put(CYL, '#2b3440', 0, 0, 13, 3, 22, 3, g);
+  block(-15, -15, 30, 30, 24, 6, c, g); block(-15, -18, 30, 7, 30, 34, c, g);
+  return g;
+}
+function buildChairs() {
+  for (const c of CHAIR_SPECS) { chairSpec.set(c.id, c); const g = chairModel(c.c); g.rotation.order = 'YXZ'; scene.add(g); chairMeshes.set(c.id, g); } // YXZ: tip over first, then turn
+  refreshChairs();
+}
+function sideDesk(px, y, s) { // against a partition at px on side s; the sitter faces the partition
+  const x0 = s > 0 ? px + 6 : px - 62;
+  solid(x0, y - 50, 56, 84, 47);
+  block(x0, y - 50, 56, 84, 42, 5, '#c9a77c');
+  block(x0, y - 50, 56, 4, 0, 42, '#a7845a'); block(x0, y + 30, 56, 4, 0, 42, '#a7845a');
+  block(s > 0 ? px + 8 : px - 14, y - 30, 6, 52, 54, 32, '#2b3440'); // monitor
+  block(s > 0 ? px + 14 : px - 15, y - 27, 1, 46, 57, 26, '#8fd0ff'); // its screen, toward the chair
+  block(s > 0 ? px + 9 : px - 13, y - 8, 4, 8, 47, 8, '#2b3440');
+  block(s > 0 ? px + 30 : px - 42, y - 18, 12, 36, 47, 2, '#eef1f4'); // keyboard
+  put(CYL, '#fffdf5', s > 0 ? x0 + 46 : x0 + 10, y + 18, 52, 5, 9, 5); // mug
+  chair(px + s * 92, y, s > 0 ? 'e' : 'w');
+}
+function headDesk(px) { // across the top end of a partition; the sitter is north of it
+  solid(px - 52, 302, 104, 40, 47);
+  block(px - 52, 302, 104, 40, 42, 5, '#c9a77c');
+  block(px - 52, 302, 4, 40, 0, 42, '#a7845a'); block(px + 48, 302, 4, 40, 0, 42, '#a7845a');
+  block(px - 26, 330, 52, 6, 54, 32, '#2b3440'); block(px - 23, 329, 46, 1, 57, 26, '#8fd0ff');
+  block(px - 4, 330, 8, 4, 47, 8, '#2b3440');
+  block(px - 18, 308, 36, 12, 47, 2, '#eef1f4');
+  put(CYL, '#fffdf5', px + 38, 316, 52, 5, 9, 5);
+  chair(px, 290, 'n');
+}
+function longTable(x, y0, y1) {
+  solid(x - 62, y0, 124, y1 - y0, 46);
+  block(x - 62, y0, 124, y1 - y0, 40, 6, '#7b5a3a');
+  for (const [lx, ly] of [[x - 52, y0 + 14], [x + 52, y0 + 14], [x - 52, y1 - 14], [x + 52, y1 - 14]]) put(CYL, '#5e4329', lx, ly, 20, 4, 40, 4);
+  for (const ly of [y0 + 60, y0 + 300]) { // laptops, screens up toward the near side
+    block(x - 40, ly, 30, 24, 46, 2, '#cfd5dc');
+    const scr = block(x - 40, ly - 2, 30, 2, 46, 22, '#8fd0ff'); scr.rotation.x = -0.35;
+  }
+  put(CYL, '#1d2430', x, y0 + 214, 48, 14, 4, 14); // speakerphone
+  for (const by of [y0 + 170, y0 + 440]) put(CYL, '#9fd3f5', x + 28, by, 56, 4.5, 20, 4.5); // water bottles
+  for (const y of [460, 560, 660, 760, 860]) { chair(x - 90, y, 'w'); chair(x + 90, y, 'e'); }
+  chair(x, 378, 'n'); chair(x, 935, 's');
+}
+function plant(x, y) {
+  solid(x - 14, y - 14, 28, 28, 60);
+  put(CYL, '#c8643c', x, y, 14, 14, 28, 14);
+  for (const [ox, oy, h, r] of [[-10, 0, 40, 14], [10, 0, 40, 14], [0, -4, 56, 16], [0, 8, 48, 12]]) put(BALL, '#4f9a4a', x + ox, y + oy, h, r, r, r);
+}
+// a name plate fixed flat on a wall (not floating): centred at x, wall face y, height h; face -1 = toward north, 1 = south
+function plaque(text, x, y, h, face) {
+  const c = document.createElement('canvas'), g = c.getContext('2d'), k = 4, W = 120, H = 34; c.width = W * k; c.height = H * k;
+  g.scale(k, k);
+  g.fillStyle = '#2b3440'; g.beginPath(); g.roundRect(1, 1, W - 2, H - 2, 6); g.fill(); // dark plate with a thin light inner line
+  g.strokeStyle = '#c9a77c'; g.lineWidth = 1.5; g.beginPath(); g.roundRect(4, 4, W - 8, H - 8, 4); g.stroke();
+  g.fillStyle = '#fffdf5'; g.font = '18px Jua, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, W / 2, H / 2 + 1);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = gl.capabilities.getMaxAnisotropy();
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: t }));
+  m.position.set(x, h, y + face * 0.6); if (face < 0) m.rotation.y = Math.PI; scene.add(m);
+}
+function signSprite(text) { // a little paper sign that always faces the camera
+  const c = document.createElement('canvas'), g = c.getContext('2d'), s = 2;
+  g.font = `${16 * s}px Jua, sans-serif`;
+  const w = Math.ceil(g.measureText(text).width + 24 * s), h = 30 * s; c.width = w; c.height = h;
+  g.fillStyle = '#fffdf5'; g.strokeStyle = INK; g.lineWidth = 2.5 * s;
+  g.beginPath(); g.roundRect(2, 2, w - 4, h - 4, 8 * s); g.fill(); g.stroke();
+  g.font = `${16 * s}px Jua, sans-serif`; g.fillStyle = INK; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, w / 2, h / 2 + 1);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c) }));
+  sp.scale.set(w / s, h / s, 1); return sp;
+}
+// ---- 중회의실: big meeting room at the end of the corridor ----
+function meetingTable(x, y0, y1) { // long table running north-south, chairs down both sides
+  solid(x - 62, y0, 124, y1 - y0, 46);
+  block(x - 62, y0, 124, y1 - y0, 40, 6, '#efe9df'); block(x - 62, y0, 124, y1 - y0, 36, 4, '#7b5a3a');
+  for (const [lx, ly] of [[x - 50, y0 + 14], [x + 50, y0 + 14], [x - 50, y1 - 14], [x + 50, y1 - 14]]) put(CYL, '#7e8a96', lx, ly, 18, 3.5, 36, 3.5);
+  for (let y = y0 + 50; y < y1 - 20; y += 100) { chair(x - 92, y, 'w', '#5d6f86'); chair(x + 92, y, 'e', '#5d6f86'); }
+  for (const [nx, ny] of [[x - 30, y0 + 120], [x + 26, y0 + 330], [x - 26, y1 - 130]]) block(nx - 10, ny - 14, 20, 28, 46, 1.5, '#fffdf5'); // papers
+  for (const by of [y0 + 220, y1 - 220]) put(CYL, '#9fd3f5', x + 34, by, 56, 4.5, 20, 4.5);
+}
+function buildMeetingRoom() {
+  for (const [x, y, w, h] of EAST_WALLS) { block(x, y, w, h, 0, CEIL, '#e3dccd'); block(x - 1, y - 1, w + 2, h + 2, 0, 10, '#8f8676'); }
+  // door frames and lintels so the openings read as doors
+  block(2200, 1060, 12, 195, 200, CEIL - 200, '#e3dccd'); // where the corridor leaves the office
+  // door: wall above the opening, and a wooden frame (two jambs + head) wrapping the wall's thickness
+  block(2380, 1255, 100, 12, 156, CEIL - 156, '#e3dccd');
+  for (const x of [2380, 2473]) block(x, 1252, 7, 18, 0, 156, '#7b5a3a');
+  block(2380, 1252, 100, 18, 149, 7, '#7b5a3a');
+  // inside, on the door wall to the left as you walk in: the projection screen, facing the tables
+  block(2560, 1267, 380, 12, 238, 12, '#2b3440'); // roller case
+  block(2570, 1272, 360, 3, 74, 166, '#f7f7f2'); // screen
+  block(2590, 1275, 320, 1, 92, 130, '#26324a'); // the projected slide
+  block(2590, 1275.5, 320, 1, 196, 26, '#3a6ea5');
+  [44, 70, 58, 96, 80].forEach((h, i) => block(2620 + i * 54, 1276, 30, 1, 104, h, i === 3 ? '#ff7448' : '#9fd3f5'));
+  meetingTable(2600, 1400, 1880); meetingTable(2880, 1400, 1880); // "11" seen from the door: both run away from you
+  // beam projector on the left table, aimed back at the screen, with a faint light cone
+  block(2608, 1620, 44, 34, 46, 16, '#e8e8ec'); block(2612, 1616, 36, 4, 50, 8, '#2b3440');
+  const lens = put(CYL, '#1d2430', 2630, 1615, 54, 5, 6, 5); lens.rotation.x = Math.PI / 2;
+  const L0 = [2630, 54, 1612], corners = [[2590, 92, 1276], [2910, 92, 1276], [2910, 222, 1276], [2590, 222, 1276]], v = [];
+  for (let i = 0; i < 4; i++) v.push(...L0, ...corners[i], ...corners[(i + 1) % 4]);
+  scene.add(new THREE.Mesh(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(v, 3)),
+    new THREE.MeshBasicMaterial({ color: '#fffbe0', transparent: true, opacity: .08, side: THREE.DoubleSide, depthWrite: false })));
+  block(2560, 1963, 300, 4, 70, 110, '#fbfbf8'); // whiteboard on the far wall
+  block(2320, 1880, 80, 60, 0, 70, '#a7845a'); solid(2320, 1880, 80, 60, 70); // side cabinet with water
+  for (const x of [2345, 2375]) put(CYL, '#9fd3f5', x, 1910, 84, 5, 22, 5);
+  for (const [x, y] of [[2985, 1295], [2985, 1940], [2330, 1295]]) plant(x, y);
+  for (const x of [2600, 2900]) plant(x, 1080); // along the corridor
+  document.fonts.ready.then(() => { plaque('중회의실', 2430, 1255, 196, -1); plaque('중회의실', 2430, 1267, 196, 1); }); // on the wall above the door, both sides
+}
+function buildOffice() {
+  const oc = document.createElement('canvas'); oc.width = WORLD_W; oc.height = WORLD_H;
+  const keep = ctx; ctx = oc.getContext('2d'); drawWorld(); ctx = keep;
+  const half = document.createElement('canvas'); half.width = WORLD_W; half.height = Math.ceil(MID);
+  half.getContext('2d').drawImage(oc, 0, 0);
+  const og = oc.getContext('2d'); og.save(); og.translate(0, 2 * MID); og.scale(1, -1); og.drawImage(half, 0, 0); og.restore(); // decalcomania
+  og.fillStyle = '#6f7f94'; og.fillRect(2312, 1267, 700, 700); // 중회의실 carpet, with a border and a lighter runner under each table
+  og.strokeStyle = '#8b99ab'; og.lineWidth = 6; og.strokeRect(2330, 1285, 664, 664);
+  og.fillStyle = '#7d8ca0'; for (const x of [2600, 2880]) og.fillRect(x - 110, 1350, 220, 570);
+  og.fillStyle = '#6c7a89'; og.fillRect(2390, 1226, 80, 24); og.fillRect(2390, 1272, 80, 24); // door mats either side
+  const tex = c => { const t = new THREE.CanvasTexture(c); t.anisotropy = gl.capabilities.getMaxAnisotropy(); return t; };
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_W, WORLD_H), new THREE.MeshBasicMaterial({ map: tex(oc) }));
+  floor.rotation.x = -Math.PI / 2; floor.position.set(WORLD_W / 2, 0, WORLD_H / 2); scene.add(floor);
+  // closed in: side walls and a tiled ceiling with light panels
+  block(-12, 0, 12, WORLD_H, 0, CEIL, '#e6dfd0');
+  const tc = document.createElement('canvas'); tc.width = tc.height = 128;
+  const tg = tc.getContext('2d'); tg.fillStyle = '#f4f2ec'; tg.fillRect(0, 0, 128, 128); tg.strokeStyle = '#d6d1c5'; tg.lineWidth = 3; tg.strokeRect(0, 0, 128, 128);
+  const tt = tex(tc); tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.repeat.set(WORLD_W / 128, WORLD_H / 128);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_W, WORLD_H), new THREE.MeshBasicMaterial({ map: tt }));
+  ceil.rotation.x = Math.PI / 2; ceil.position.set(WORLD_W / 2, CEIL, WORLD_H / 2); scene.add(ceil);
+  const LIGHT = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+  for (let x = 160; x < WORLD_W; x += 300) for (let y = 310; y < WORLD_H; y += 300) block(x - 60, y - 30, 120, 60, CEIL - 3, 3, LIGHT);
+
+  // the north half, built once into a group...
+  const north = new THREE.Group(); scene.add(north); building = north;
+  const wc = document.createElement('canvas'); wc.width = WORLD_W; wc.height = CEIL;
+  const wg = wc.getContext('2d');
+  wg.fillStyle = '#ebe5d8'; wg.fillRect(0, 0, WORLD_W, CEIL); wg.fillStyle = '#e1d6c2'; wg.fillRect(0, 0, 312, CEIL); wg.fillRect(1888, 0, 312, CEIL);
+  wg.fillStyle = '#d8cfbd'; wg.fillRect(0, 0, WORLD_W, 10); // crown moulding
+  wg.drawImage(oc, 0, 0, WORLD_W, WALL, 0, CEIL - WALL, WORLD_W, WALL);
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(WORLD_W, CEIL), new THREE.MeshBasicMaterial({ map: tex(wc) }));
+  back.position.set(WORLD_W / 2, CEIL / 2, WALL); north.add(back);
+  for (const [x, y, w, h, style] of NORTH_WALLS) {
+    if (style === 'glass') { block(x, y, w, h, 0, CEIL, '#e3dccd'); block(x - 1, y - 1, w + 2, h + 2, 0, 10, '#8f8676'); } // solid room walls
+    else if (style === 'part') { block(x, y, w, h, 0, 70, '#c4d3df'); block(x - 1, y, w + 2, h, 70, 3, '#8fa3b5'); }
+    else { // drawer cabinet: body plus drawer fronts (the mirror copy adds the other side's)
+      block(x, y, w, h, 0, 80, '#cfc3ae'); block(x, y, w, h, 80, 4, '#e2d8c6');
+      for (let dx = x + 8; dx + 104 <= x + w; dx += 120) for (const z of [8, 42]) { block(dx, y + h, 104, 2, z, 28, '#ddd2bf'); block(dx + 40, y + h + 2, 24, 2, z + 11, 6, '#7e8a96'); }
+    }
+  }
+  SEATS.forEach((seats, i) => seats.forEach(code => {
+    if (code === 'H') return headDesk(PARTS[i]);
+    sideDesk(PARTS[i], ROW_Y[+code[1]], code[0] === 'L' ? -1 : 1);
+  }));
+  for (const x of [150, 2050]) longTable(x, 400, 900);
+  for (const [x, y] of [[345, 215], [1850, 215], [40, 1180], [2170, 1036]]) plant(x, y); // the last one (and its mirror) flank the corridor
+  building = scene;
+  // ...and mirrored across the cabinet for the south half (three flips the face winding of a negative scale for us)
+  const south = north.clone(); south.scale.z = -1; south.position.z = 2 * MID; scene.add(south);
+  SOLIDS.push(...SOLIDS.map(([x, y, w, d, h]) => [x, flipY(y + d), w, d, h]));
+  for (const c of CHAIR_SPECS.slice()) CHAIR_SPECS.push({ ...c, id: `${c.x}_${flipY(c.y)}`, y: flipY(c.y), rot: Math.PI - c.rot }); // mirrored chairs
+  for (const [x, y, w, h, st] of NORTH_WALLS) if (st === 'cabinet') solid(x, y, w, h, 84);
+  // one water cooler + kettle set for the whole floor, on the north side only (not mirrored)
+  solid(342, 1082, 36, 36, 106); block(342, 1082, 36, 36, 0, 62, '#f3f5f7'); put(CYL, '#9fd3f5', 360, 1100, 84, 13, 44, 13); // water cooler
+  solid(418, 1080, 84, 40, 42); block(418, 1080, 84, 40, 0, 42, '#a7845a'); put(CYL, '#d6d9de', 450, 1100, 60, 12, 32, 12); // kettle on a counter
+  for (const cx of [478, 490]) put(CYL, '#fffdf5', cx, 1100, 48, 5, 12, 5);
+  buildMeetingRoom();
+  const MIRROR_NAME = { '회의실 A': '회의실 C', '회의실 B': '회의실 D' };
+  document.fonts.ready.then(() => {
+    for (const d of DOORS) if (d.label) for (const [label, y] of [[d.label, d.y1 - 10], [MIRROR_NAME[d.label], flipY(d.y1 - 10)]]) {
+      const s = signSprite(label); s.position.set(d.x + d.side * 70, 150, y); scene.add(s);
+    }
+  });
+}
+// seats from 디자인1: per partition, H = desk at the top end, L/R = left/right side, 0/1 = upper/lower row
+const SEATS = [['H', 'L0', 'R0', 'R1'], ['H', 'L0', 'R0', 'L1', 'R1'], ['H', 'R0'], ['H', 'L0', 'R0', 'R1'], ['H', 'L0', 'R0', 'L1', 'R1']];
+const ROW_Y = [500, 760];
+if (gl) { buildOffice(); buildChairs(); }
+
+// ---- people ----
+function rifleModel(parent) { // lies along +x from the grip
+  put(BOX, '#2b3440', 40, 0, 0, 62, 5, 5, parent); // barrel
+  put(BOX, '#6b4a2e', 4, 0, -2, 24, 10, 7, parent); // stock
+  put(BOX, '#111418', 34, 0, 7, 22, 5, 5, parent); // scope
+  put(BOX, '#2b3440', 18, 0, -7, 4, 9, 4, parent); // grip
+}
+function batModel(parent) { // along +y from the grip
+  put(CYL, '#c98a4b', 0, 0, 26, 3.6, 40, 3.6, parent); put(CYL, '#c98a4b', 0, 0, 40, 5, 14, 5, parent);
+  put(CYL, '#2b3440', 0, 0, 6, 3.8, 12, 3.8, parent);
+}
+// arms: a shoulder pivot with a limb hanging down (-y) and a fist at its end; poses rotate the pivot
+const ARM_GEO = new THREE.CylinderGeometry(0.7, 1, 1, 14); // narrower at the shoulder
+const ARM_L = 21, DOWN = new THREE.Vector3(0, -1, 0), armV = new THREE.Vector3();
+const SWOOSH = new THREE.RingGeometry(20, 74, 28, 1, -Math.PI - 0.15, Math.PI + 0.3); // the front half circle once laid flat
+function makeArm(up, side) {
+  const pivot = new THREE.Group(); pivot.position.set(13.5 * side, 29, 0); up.add(pivot); // inside the body: the arm grows out of its side
+  const limb = put(ARM_GEO, COLORS[0], 0, 0, -10, 2.7, 20, 2.7, pivot); put(ARM_GEO, INK_HULL, 0, 0, -10.3, 3.9, 20.6, 3.9, pivot);
+  const hand = new THREE.Group(); hand.position.y = -ARM_L; pivot.add(hand);
+  const fist = put(BALL, COLORS[0], 0, 0, 0, 4, 4, 4, hand); put(BALL, INK_HULL, 0, 0, 0, 5.3, 5.3, 5.3, hand);
+  return { pivot, hand, side, skin: [limb, fist] };
+}
+// put an arm's fist on a spot in the body's own frame (+z forward, +y up, -x right); cartoon arms stretch to get there
+function reach(arm, x, y, z) {
+  armV.set(x - arm.pivot.position.x, y - arm.pivot.position.y, z);
+  const len = Math.max(8, armV.length());
+  arm.pivot.quaternion.setFromUnitVectors(DOWN, armV.normalize());
+  arm.pivot.scale.set(1, len / ARM_L, 1); arm.hand.scale.set(1, ARM_L / len, 1); // fist stays round
+}
+const relax = arm => { arm.pivot.scale.set(1, 1, 1); arm.hand.scale.set(1, 1, 1); };
+function makeAvatar() {
+  const g = new THREE.Group(), up = new THREE.Group(); g.add(up);
+  flat(DISC, SHADOW, 0, 0, 0.6, 18, g);
+  const body = put(BALL, COLORS[0], 0, 0, 24, 19, 23, 19, up);
+  put(BALL, INK_HULL, 0, 0, 24, 21, 25.5, 21, up); // ink outline, like the drawings
+  const eyes = [-6, 6].map(ex => {
+    const e = new THREE.Group(); e.userData.ex = ex; e.position.set(ex, 29, 16); up.add(e);
+    put(BALL, '#ffffff', 0, 0, 0, 5, 5, 3, e); put(BALL, INK, 0, 2.6, 0, 2.4, 2.4, 1.4, e);
+    return e;
+  });
+  const R = makeArm(up, -1), L = makeArm(up, 1); // right arm is on local -x
+  const bat = new THREE.Group(); batModel(bat); R.hand.add(bat); // one-handed, in the right fist
+  const rifle = new THREE.Group(); rifleModel(rifle); rifle.rotation.y = -Math.PI / 2; up.add(rifle); // model +x -> forward
+  const swoosh = new THREE.Mesh(SWOOSH, new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+  swoosh.rotation.x = -Math.PI / 2; swoosh.position.y = 26; up.add(swoosh); // white arc of a bat swing
+  const laserGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0], 3));
+  const laser = new THREE.Line(laserGeo, new THREE.LineBasicMaterial({ color: '#ff2a2a' })); scene.add(laser);
+  g.userData = { up, body, eyes, bat, rifle, laser, R, L, swoosh, walk: 0, phase: 0 };
+  return g;
+}
+const avatars = new Map(); // player id -> Group
+function placeAvatar(p, now) {
+  let g = avatars.get(p.id);
+  if (!g) { g = makeAvatar(); scene.add(g); avatars.set(p.id, g); }
+  const u = g.userData, { up, body, eyes, bat, rifle, laser, R, L, swoosh } = u, sc = sizeOf(p.kg);
+  body.material = mat(p.color);
+  for (const m of [...R.skin, ...L.skin]) m.material = body.material;
+  // walking: how fast this avatar actually moved decides the arm swing and bob, for you and everyone else
+  const dtA = Math.min(0.1, (now - (u.lt ?? now)) / 1000), moved = u.lx === undefined ? 0 : Math.hypot(p.x - u.lx, p.y - u.ly);
+  u.lx = p.x; u.ly = p.y; u.lt = now;
+  if (dtA > 0) u.walk += (Math.min(1, moved / dtA / SPEED) - u.walk) * Math.min(1, dtA * 10);
+  u.phase += dtA * 12 * u.walk;
+  const sw = Math.sin(u.phase) * 0.8 * u.walk;
+  g.position.set(p.hurt ? p.x + Math.sin(now / 25) * 3 : p.x, 0, p.y); g.scale.setScalar(sc);
+  up.position.y = p.z / sc + Math.abs(Math.sin(u.phase)) * 2.2 * u.walk; up.rotation.z = Math.sin(u.phase) * .05 * u.walk;
+  g.rotation.y = Math.PI / 2 - p.a; // the face (+z) points along the heading
+  g.visible = !(p.mine && (p.ai || camInside)); // scoped or backed into a corner: you see through your own eyes
+  for (const e of eyes) e.scale.y = p.hurt ? .25 : 1;
+  const anim = swingAnim.get(p.id), sp = anim ? (now - anim.start) / SWING_ANIM_MS : 2, swinging = sp < 1;
+  bat.visible = swinging || (p.bat > 0 && !(p.rifle > 0)); // with both, you carry the rifle until you swing
+  rifle.visible = p.rifle > 0 && !swinging;
+  const held = p.chair ? chairMeshes.get(p.chair) : null, thr = throwPose.get(p.id), tp = thr ? (now - thr) / 380 : 2;
+  if (held || tp < 1) { bat.visible = rifle.visible = false; swoosh.visible = false; }
+  if (!held) u.heldChair = null;
+  swoosh.visible = swinging;
+  if (!rifle.visible || swinging) { relax(R); relax(L); }
+  up.rotation.y = 0;
+  if (held) { // lifted from the floor in front of you to over your head, held by its base; winding up tips it back
+    if (u.heldChair !== p.chair) { u.heldChair = p.chair; u.liftAt = now; }
+    if (held.parent !== up) up.add(held);
+    const lf = Math.min(1, (now - u.liftAt) / 380), e = lf * lf * (3 - 2 * lf), c = (p.ch || 0) * e; // (L is the left arm)
+    const cy = 2 + 48 * e - 5 * c, cz = 26 * (1 - e) - 3 * e - 16 * c;
+    held.scale.setScalar(1 / sc); held.position.set(0, cy, cz); held.rotation.set(-.55 * c, 0, 0);
+    reach(R, -11, cy + 2, cz); reach(L, 11, cy + 2, cz);
+  } else if (tp < 1) { // just let go: both arms whip from behind the head forward and down
+    const e = 1 - (1 - tp) ** 3, y = 52 - 30 * e, z = -14 + 44 * e;
+    reach(R, -11, y, z); reach(L, 11, y, z);
+  } else if (swinging) { // wind up behind the right shoulder, whip level across the front, follow through high on the left
+    let phi, lift, twist; // arm direction around the body, its height (0 = level), and how far the shoulders turn
+    if (sp < .3) { const e = Math.sin(sp / .3 * Math.PI / 2); phi = -1.3 - .9 * e; lift = .3 + .5 * e; twist = -.45 * e; }
+    else if (sp < .72) { const e = (sp - .3) / .42, q = e * e * (3 - 2 * e); phi = -2.2 + 4 * q; lift = .8 - .78 * q; twist = -.45 + 1 * q; }
+    else { const e = (sp - .72) / .28; phi = 1.8 + .15 * e; lift = .02 + .55 * e; twist = .55 * (1 - e * e); }
+    armV.set(Math.sin(phi) * Math.cos(lift), Math.sin(lift), Math.cos(phi) * Math.cos(lift)); R.pivot.quaternion.setFromUnitVectors(DOWN, armV);
+    bat.rotation.set(Math.PI - .2, 0, 0); // out of the fist, carrying on the arm's line
+    up.rotation.y = twist;
+    L.pivot.rotation.set(.35 - twist * .6, 0, .3 + Math.max(0, twist) * .3); // the free arm swings the other way for balance
+    swoosh.visible = sp > .32 && sp < .9;
+    swoosh.material.opacity = .6 * Math.sin(Math.PI * Math.min(1, Math.max(0, (sp - .32) / .58)));
+  } else if (rifle.visible) { // both hands on the rifle: grip and fore-end; raised to the shoulder when scoped
+    const bob = Math.sin(u.phase * 2) * 0.8 * u.walk;
+    if (p.ai) { rifle.position.set(-8, 33 + bob, -4); reach(R, -8, 26 + bob, 14); reach(L, -8, 31 + bob, 30); } // at the shoulder
+    else { rifle.position.set(-8, 26 + bob, 0); reach(R, -8, 19 + bob, 18); reach(L, -8, 24 + bob, 34); } // across the chest, muzzle forward
+  } else { // arms swing opposite each other; the bat (if any) rides in the right fist, tipped forward
+    R.pivot.rotation.set(sw, 0, -0.3); L.pivot.rotation.set(-sw, 0, 0.3); // hang slightly out from the round body
+    bat.rotation.set(1.25, 0, -0.15);
+  }
+  laser.visible = p.rifle > 0 && p.ai && !p.mine;
+  if (laser.visible) { // from the muzzle out across the room
+    const h = p.z + 30 * sc, ca = Math.cos(p.a), sa = Math.sin(p.a), a = laser.geometry.attributes.position;
+    a.setXYZ(0, p.x + ca * 70 * sc, h, p.y + sa * 70 * sc); a.setXYZ(1, p.x + ca * 1400, h, p.y + sa * 1400); a.needsUpdate = true;
+    laser.geometry.computeBoundingSphere();
+  }
+}
+function dropAvatars(seen) {
+  for (const [id, g] of avatars) if (!seen.has(id)) { scene.remove(g, g.userData.laser); avatars.delete(id); }
+}
+
+// ---- items, poops, stones, shots ----
+function makeItem(k) {
+  const g = new THREE.Group(), it = new THREE.Group(); g.add(it);
+  flat(DISC, SHADOW, 0, 0, 0.6, k >= 4 ? 18 : 11, g);
+  if (k === 0) put(CYL, '#d9a35b', 0, 0, 0, 10, 4, 10, it);
+  else if (k === 1) { const d = new THREE.Mesh(TORUS, mat('#f59fc0')); d.rotation.x = Math.PI / 2; it.add(d); }
+  else if (k === 2) { put(BALL, '#ff5c8a', 0, 0, 0, 8, 7, 7, it); put(BOX, '#ff5c8a', -12, 0, 0, 6, 10, 2, it); put(BOX, '#ff5c8a', 12, 0, 0, 6, 10, 2, it); }
+  else if (k === 3) { put(BOX, '#f2c230', 0, 0, 0, 16, 22, 6, it); put(BOX, '#d64545', 0, 0, 0, 16.6, 5, 6.6, it); }
+  else if (k === 4) { // lunchbox
+    put(BOX, '#2b3440', 0, 0, 0, 32, 10, 22, it); put(BOX, '#fffdf5', -6, 0, 5, 14, 2, 16, it);
+    put(BOX, '#ff7448', 8, -4, 5, 10, 3, 7, it); put(BOX, '#4f9a4a', 8, 4, 5, 10, 3, 7, it); put(BALL, '#d64545', -6, 0, 6.5, 2.5, 2.5, 2.5, it);
+  } else if (k === 5) { // big 3-tier lunchbox
+    [['#d64545', 0], ['#2b3440', 12], ['#d64545', 24]].forEach(([c, h]) => put(BOX, c, 0, 0, h, 36, 11, 26, it));
+    put(BOX, '#f2c230', 0, 0, 12, 6, 37, 27, it); put(BOX, '#f2c230', 0, 0, 32, 14, 6, 8, it);
+  } else if (k === 6) { const b = new THREE.Group(); batModel(b); b.rotation.z = -Math.PI / 2; b.position.x = -24; it.add(b); }
+  else { const r = new THREE.Group(); rifleModel(r); r.position.x = -35; it.add(r); }
+  const glow = k >= 4 ? flat(RING, k >= 6 ? GLOW.white : GLOW.gold, 0, 0, 1, k === 4 ? 22 : 30, g) : null;
+  g.userData = { it, glow, k };
+  return g;
+}
+const itemMeshes = new Map(), poopMeshes = new Map(), stoneMeshes = new Map();
+function makePoop() {
+  const g = new THREE.Group(); flat(DISC, SHADOW, 0, 0, 0.6, 14, g);
+  for (const [h, r, ry] of [[5, 13, 6], [12, 9, 5], [18, 5, 4]]) put(BALL, '#7a4a26', 0, 0, h, r, ry, r, g);
+  return g;
+}
+// keeps one mesh per server object: adds new ones, drops gone ones
+function sync(map, list, make) {
+  const seen = new Set();
+  for (const o of list) {
+    seen.add(o.id);
+    if (!map.has(o.id)) { const m = make(o); scene.add(m); map.set(o.id, m); }
+  }
+  for (const [k, m] of map) if (!seen.has(k)) { scene.remove(m); map.delete(k); }
+}
+function placeThings(now, stonesNow) {
+  const pos = o => ({ x: num(o.x, 0, WORLD_W), y: num(o.y, 0, WORLD_H) });
+  sync(itemMeshes, snacks, s => makeItem(num(s.k, 0, 7)));
+  for (const s of snacks) {
+    const m = itemMeshes.get(s.id), { x, y } = pos(s), { it, glow, k } = m.userData;
+    m.position.set(x, surfaceAt(x, y), y); // on a desk if it landed on one
+    it.position.y = (k >= 4 ? 18 : 14) + Math.sin(now / 300 + x) * 3; it.rotation.y = now / 700 + x;
+    if (glow) glow.scale.setScalar((k === 4 ? 22 : 30) * (1 + Math.sin(now / 200) * .12));
+  }
+  sync(poopMeshes, poops, makePoop);
+  for (const p of poops) { const { x, y } = pos(p); poopMeshes.get(p.id).position.set(x, surfaceAt(x, y), y); }
+  sync(stoneMeshes, stonesNow, () => put(BALL, '#8a8f96', 0, 0, 0, 6, 5, 6, new THREE.Group()).parent);
+  for (const s of stonesNow) stoneMeshes.get(s.id).position.set(s.x, 6 + s.lift, s.y);
+}
+// chairs on the floor (home or where they landed); held ones ride on their holder (placeAvatar), flying ones in hurlStep
+// how a chair can lie: [tip about x, tip about z, height of its origin off the floor]: standing, on either side, on its back, on its face
+const POSES = [[0, 0, 0], [0, Math.PI / 2, 15], [0, -Math.PI / 2, 15], [-Math.PI / 2, 0, 18], [Math.PI / 2, 0, 15]];
+function placeChairs() {
+  for (const c of CHAIR_SPECS) {
+    const g = chairMeshes.get(c.id), st = chairNow(c.id);
+    if (chairFlying(c.id) || (st.held && avatars.has(st.held))) continue;
+    if (g.parent !== scene) scene.add(g);
+    const pz = POSES[st.pose | 0] || POSES[0];
+    g.scale.setScalar(1); g.position.set(st.x, pz[2], st.y); g.rotation.set(pz[0], st.r ?? c.rot, pz[1]);
+  }
+}
+// a thrown chair: leaves from over the thrower's head along an arc, turning slowly from how it was held to how it will lie;
+// if a wall stopped it, it hits the wall up in the air and drops down beside it
+const lerpAngle = (a, b, k) => a + (((b - a) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI) * k;
+function hurlStep(now, players) {
+  const at = new Map(players.map(p => [p.id, p]));
+  for (const f of hurlFx.values()) {
+    if (f.done) continue;
+    const h = f.h, g = chairMeshes.get(h.c); if (!g) { f.done = true; continue; }
+    const pw = num(h.p, 0, 1);
+    if (!f.path) {
+      const th = at.get(h.by), sc = th ? sizeOf(th.kg) : 1;
+      f.path = { sx: num(h.sx, 0, WORLD_W), sy: num(h.sy, 0, WORLD_H), h0: (th ? th.z : 0) + 50 * sc, arc: 25 + 35 * pw, yaw0: th ? Math.PI / 2 - th.a : 0 };
+    }
+    const P = f.path, lx = num(h.lx, 0, WORLD_W), ly = num(h.ly, 0, WORLD_H), wall = h.wall === 1, pose = POSES[num(h.pose, 0, 4) | 0];
+    const dd = Math.hypot(lx - P.sx, ly - P.sy) || 1, ux = (lx - P.sx) / dd, uy = (ly - P.sy) / dd;
+    // it flies the arc to where it stopped (the floor, a wall, the ceiling or someone), then drops if that was in mid-air
+    const ex = Number.isFinite(h.ex) ? num(h.ex, 0, WORLD_W) : lx, ey = Number.isFinite(h.ey) ? num(h.ey, 0, WORLD_H) : ly;
+    const ballistic = Number.isFinite(h.sl) && h.v > 0, h0 = ballistic ? num(h.h0, 0, 400) : P.h0, cd = Math.hypot(ex - P.sx, ey - P.sy);
+    const arcAt = k => ballistic ? Math.max(0, h0 + h.sl * cd * k - (1 + h.sl * h.sl) * (cd * k) ** 2 / (2 * h.v * h.v)) : P.h0 * (1 - k) + P.arc * Math.sin(Math.PI * k);
+    const stopTop = arcAt(1), drops = stopTop > 20 || wall || !!h.hit;
+    const fly = Math.max(250, cd / hurlSpeed(pw)), fall = drops ? 260 + Math.sqrt(stopTop) * 12 : 0, t = now - f.start;
+    const q = Math.min(1, t / (fly + fall)), turn = q * q * (3 - 2 * q); // turning eases in and out over the whole trip
+    let x, y, hgt;
+    if (t < fly) {
+      const k = t / fly;
+      x = P.sx + (ex - P.sx) * k; y = P.sy + (ey - P.sy) * k;
+      hgt = arcAt(k) + (drops ? 0 : pose[2] * k);
+    } else {
+      const e = Math.min(1, (t - fly) / fall);
+      x = ex + (lx - ex) * e; y = ey + (ly - ey) * e; hgt = stopTop + (pose[2] - stopTop) * e * e; // falls, speeding up
+    }
+    if (g.parent !== scene) scene.add(g);
+    g.scale.setScalar(1); g.position.set(x, hgt, y);
+    g.rotation.set(-.45 + (pose[0] + .45) * turn, lerpAngle(P.yaw0, Number.isFinite(h.r) ? h.r : P.yaw0, turn), pose[1] * turn);
+    if (f.retarget) f.retarget = false;
+    if (t < fly + fall) continue;
+    f.done = true;
+    if (h.hit) {
+      hurt.set(h.hit, now + HURT_MS * 1.5);
+      if (h.hit === myId && me) { const kn = 700 + 1500 * pw; me.kx = ux * kn; me.ky = uy * kn; me.vz = 300 + 300 * pw; }
+    }
+  }
+}
+// rifle shots: muzzle flash, a bullet with a tracer flying to the end point, a puff where it stops; the hit lands on arrival
+const shotFx = new Map(); // shot id -> {s, start, done, line, ...}
+const SHOT_KNOCK = 1600, BULLET_SPEED = 3.2; // px per ms
+const BULLET = new THREE.MeshBasicMaterial({ color: '#ffe066' }), BULLET_TOP = new THREE.MeshBasicMaterial({ color: '#ffe066', depthTest: false }), FLASH = new THREE.MeshBasicMaterial({ color: '#fff4b0' }), PUFF = new THREE.MeshBasicMaterial({ color: '#d9d4c8' });
+// the flight line: level, down your sight line (your own shot), or into the body of whoever it hit
+// the bullet climbs or drops at the angle it was aimed (server and screen agree); a miss ends in the floor or ceiling
+function shapePath(P, f) {
+  P.len = Math.max(1, Math.hypot(P.ex - P.sx, P.ey - P.sy)); P.ux = (P.ex - P.sx) / P.len; P.uy = (P.ey - P.sy) / P.len;
+  const sl = num(f.s.sl, -3, 3);
+  if (!f.s.hit && sl < 0) P.len = Math.min(P.len, (P.h0 - 1) / -sl);
+  if (!f.s.hit && sl > 0) P.len = Math.min(P.len, (CEIL - 2 - P.h0) / sl);
+  P.h1 = P.h0 + sl * P.len;
+}
+function cancelShot(f) { // the server refused it (no ammo / too fast): take the bullet back
+  if (!f || f.done) return;
+  scene.remove(f.bullet, f.flash, f.line, f.puff); f.line?.material.dispose();
+  f.bullet = f.flash = f.line = f.puff = null; f.done = true;
+}
+function shotStep(now, players) {
+  const at = new Map(players.map(p => [p.id, p]));
+  for (const f of shotFx.values()) {
+    if (f.done) continue;
+    const s = f.s;
+    if (!f.path) { // first frame: from the shooter's muzzle to the end point
+      const sx = num(s.sx, 0, WORLD_W), sy = num(s.sy, 0, WORLD_H), ex = num(s.ex, -WORLD_W, 2 * WORLD_W), ey = num(s.ey, -WORLD_H, 2 * WORLD_H);
+      const shooter = at.get(s.by), victim = s.hit && at.get(s.hit);
+      const sc0 = shooter ? sizeOf(shooter.kg) : 0, eye = f.scoped; // through your own scope: leave from just under your eye
+      const d0 = Math.hypot(ex - sx, ey - sy) || 1, fx = (ex - sx) / d0, fy = (ey - sy) / d0, fw = (eye ? 90 : 66) * sc0, rt = (eye ? 0 : 8) * sc0; // others: the tip of the shouldered rifle
+      const mx = sx + fx * fw - fy * rt, my = sy + fy * fw + fx * rt; // muzzle: ahead and to the right, where the rifle is held
+      const base = Number.isFinite(s.h0) ? s.h0 : shooter ? shooter.z + 34.5 * sc0 : 34; // eye height, where the server's line starts
+      const h0 = base + num(s.sl, -3, 3) * fw; // ...already a little up or down the line at the muzzle
+      f.path = { sx: mx, sy: my, h0, ex, ey };
+      shapePath(f.path, f);
+      // your own shot is drawn on top, so your body (right in front of the camera) never hides it
+      const mine = s.by === myId;
+      // through the 12-degree scope everything near the eye looks huge: a slim bullet and trail, no flash in your face
+      const bw = eye ? 1.4 : 5, tw = eye ? .7 : 3;
+      f.bullet = put(BOX, mine ? BULLET_TOP : BULLET, 0, 0, 0, bw, bw, eye ? 12 : 30, scene);
+      f.flash = eye ? null : put(BALL, FLASH, mx, my, h0, 14, 14, 14, scene);
+      f.line = put(BOX, new THREE.MeshBasicMaterial({ color: '#ffe066', transparent: true, opacity: .6, depthWrite: false, depthTest: !mine }), 0, 0, 0, tw, tw, 1, scene); // glowing trail
+      if (mine) f.bullet.renderOrder = f.line.renderOrder = 10;
+    }
+    if (f.retarget) { // the server's end point (shorter if it hit someone) replaces our guess, same start
+      f.retarget = false;
+      const ex = num(f.s.ex, -WORLD_W, 2 * WORLD_W), ey = num(f.s.ey, -WORLD_H, 2 * WORLD_H), P = f.path, victim = f.s.hit && at.get(f.s.hit);
+      P.ex = ex; P.ey = ey; shapePath(P, f);
+    }
+    const P = f.path, gone = (now - f.start) * BULLET_SPEED, k = Math.min(1, gone / P.len), tail = Math.max(0, k - 240 / P.len);
+    const pos = q => [P.sx + P.ux * P.len * q, P.h0 + (P.h1 - P.h0) * q, P.sy + P.uy * P.len * q];
+    const head = new THREE.Vector3(...pos(k)), back = new THREE.Vector3(...pos(tail));
+    f.line.position.copy(head).add(back).multiplyScalar(.5); f.line.scale.z = Math.max(1, head.distanceTo(back)); f.line.lookAt(head);
+    if (f.flash) { const fl = 1 - (now - f.start) / 90; if (fl <= 0) { scene.remove(f.flash); f.flash = null; } else f.flash.scale.setScalar(10 * fl + 2); }
+    if (f.bullet) { f.bullet.position.copy(head); f.bullet.lookAt(pos(Math.min(1, k + .01))[0], head.y, pos(Math.min(1, k + .01))[2]); }
+    if (k >= 1 && f.bullet) { // arrived
+      scene.remove(f.bullet); f.bullet = null; f.endAt = now;
+      const end = pos(1); f.puff = put(BALL, PUFF, end[0], end[2], end[1], 4, 4, 4, scene);
+      if (s.hit) {
+        hurt.set(s.hit, now + HURT_MS * 1.5);
+        if (s.hit === myId && me) { me.kx = P.ux * SHOT_KNOCK; me.ky = P.uy * SHOT_KNOCK; me.vz = 380; }
+      }
+    }
+    if (f.endAt) {
+      const e = (now - f.endAt) / 250;
+      f.puff.scale.setScalar(4 + e * 14); f.line.material.opacity = .6 * (1 - e);
+      if (e >= 1) { scene.remove(f.puff, f.line); f.line.material.dispose(); f.line = null; f.done = true; }
+    }
+  }
+}
+
+// ---- camera: over your right shoulder, turned by the mouse; wheel = distance; scoped = from your eye, zoomed ----
+let camDist = 170;
+const WALL_H = { glass: CEIL, part: 73, cabinet: 84 };
+// tallest wall/cabinet within m of a floor point (Infinity outside the room); m clear so the near plane never cuts inside
+const camTop = (x, y, m = 10) => x < 6 || x > WORLD_W - 6 || y < WALL + 6 || y > WORLD_H - WALL - 6 ? Infinity :
+  Math.max(0, ...WALLS.filter(([wx, wy, ww, wh]) => x > wx - m && x < wx + ww + m && y > wy - m && y < wy + wh + m).map(w => WALL_H[w[4]]));
+const camBlocked = (x, y, h, m = 10) => h > CEIL - 8 || h < camTop(x, y, m) + m;
+const camDir = new THREE.Vector3(), camPivot = new THREE.Vector3();
+let camInside = false, camZ = 0; // camZ: the camera's height follows jumps softly, so the crosshair doesn't drop at your feet mid-jump
+function placeCamera(dt) {
+  camera.aspect = innerWidth / innerHeight;
+  if (!me) { // before joining: look over the whole office
+    camera.fov = 45; camera.position.set(WORLD_W / 2, 1300, WORLD_H + 700); camera.lookAt(WORLD_W / 2, 0, WORLD_H / 2);
+    return camera.updateProjectionMatrix();
+  }
+  kick *= Math.exp(-12 * dt);
+  const lk = look - kick, sc = sizeOf(me.kg), ca = Math.cos(yaw), sa = Math.sin(yaw), cl = Math.cos(lk);
+  camDir.set(ca * cl, -Math.sin(lk), sa * cl);
+  if (me.ai) {
+    camera.fov = 12;
+    camera.position.set(me.x, me.z + 36 * sc, me.y).addScaledVector(camDir, 14 * sc);
+  } else {
+    camera.fov += (60 - camera.fov) * (1 - Math.exp(-14 * dt));
+    camZ += (me.z - camZ) * (1 - Math.exp(-(me.z > camZ ? 2.5 : 6) * dt)); // rises slowly on a jump, settles back quickly
+    const ph = Math.min(CEIL - 20, camZ + (myChairId() ? 84 : 48) * sc); // with a chair overhead the camera rises to look over it
+    camPivot.set(me.x - sa * 20 * sc, ph, me.y + ca * 20 * sc); // 20 to the right: right = (-sin, cos)
+    if (camBlocked(camPivot.x, camPivot.z, ph)) camPivot.set(me.x, ph, me.y); // hugging something: no shoulder offset
+    const m = camBlocked(camPivot.x, camPivot.z, ph) ? 3 : 10; // pressed right against it: a thinner gap, still outside
+    let d = camDist * sc * (myChairId() ? 1.6 : 1); // further back with a chair overhead; pulled in front of any wall behind you
+    for (let t = 0; t <= d; t += 4) {
+      camera.position.copy(camPivot).addScaledVector(camDir, -t);
+      if (camBlocked(camera.position.x, camera.position.z, camera.position.y, m)) { d = Math.max(0, t - 6); break; }
+    }
+    camera.position.copy(camPivot).addScaledVector(camDir, -d);
+    camera.position.y = Math.max(8, camera.position.y);
+  }
+  // backed against something: the camera ends up in your body, so you vanish and see from your head instead of your insides
+  camInside = Math.hypot(camera.position.x - me.x, camera.position.y - me.z - 24 * sizeOf(me.kg), camera.position.z - me.y) < 26 * sizeOf(me.kg);
+  camera.lookAt(camera.position.x + camDir.x, camera.position.y + camDir.y, camera.position.z + camDir.z);
+  camera.updateProjectionMatrix();
+}
+// what the crosshair points at, on the floor at body height; looking up or too far = straight ahead across the room
+const ray = new THREE.Raycaster(), aimPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -24), hitV = new THREE.Vector3();
+function crosshairTarget() {
+  ray.setFromCamera({ x: 0, y: 0 }, camera);
+  const ca = Math.cos(yaw), sa = Math.sin(yaw);
+  if (ray.ray.direction.y < -0.01 && ray.ray.intersectPlane(aimPlane, hitV)) {
+    const ahead = (hitV.x - me.x) * ca + (hitV.z - me.y) * sa;
+    if (ahead > 20 && ahead < 2600) return { x: Math.round(hitV.x), y: Math.round(hitV.z), plane: true };
+  }
+  return { x: Math.round(me.x + ca * 2600), y: Math.round(me.y + sa * 2600) };
+}
+function drawCrosshair() {
+  const cx = innerWidth / 2, cy = innerHeight / 2;
+  if (me.ai) { // scope: black around a round lens, fine cross with thick outer posts, red dot
+    const r = Math.min(innerWidth, innerHeight) * .44;
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.rect(0, 0, innerWidth, innerHeight); ctx.arc(cx, cy, r, Math.PI * 2, 0, true); ctx.fill(); // full circle cut out of the black
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.beginPath();
+    ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r); ctx.stroke();
+    ctx.lineWidth = 6; ctx.beginPath();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1]]) { ctx.moveTo(cx + dx * r * .45, cy + dy * r * .45); ctx.lineTo(cx + dx * r, cy + dy * r); }
+    ctx.stroke();
+    ctx.lineWidth = 1; for (let i = 1; i <= 4; i++) { ctx.beginPath(); ctx.moveTo(cx - 5, cy + i * r * .09); ctx.lineTo(cx + 5, cy + i * r * .09); ctx.stroke(); }
+    ctx.fillStyle = '#ff2a2a'; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 7); ctx.fill();
+    const left = myRifle(), side = cx - r > 240; // left of the lens on wide screens (the ranking sits on the right), under it on phones
+    const ax = side ? cx - r - 226 : cx - 95, ay = side ? cy - 30 : Math.min(innerHeight - 150, cy + r + 18);
+    ctx.fillStyle = '#fffdf5'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.font = '16px Jua, sans-serif'; ctx.fillText('TRG 남은 총알', ax, ay);
+    ctx.font = '34px Jua, sans-serif'; ctx.fillText(`${left}발`, ax, ay + 22);
+    for (let i = 0; i < Math.max(10, Math.min(left, 30)); i++) { // rows of 10; extra pickups add rows
+      ctx.fillStyle = i < left ? '#ffe066' : 'rgba(255,253,245,.18)'; ctx.beginPath(); ctx.roundRect(ax + (i % 10) * 19, ay + 66 + ((i / 10) | 0) * 32, 12, 26, 4); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
+    return;
+  }
+  ctx.lineCap = 'round';
+  for (const [w, c] of [[4, INK], [2, '#fff']]) {
+    ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { ctx.moveTo(cx + dx * 5, cy + dy * 5); ctx.lineTo(cx + dx * 12, cy + dy * 12); }
+    ctx.stroke();
+  }
+  ctx.lineCap = 'butt';
+  const hint = (t, y) => { // a small dark pill under the crosshair
+    ctx.font = '15px Jua, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const w = ctx.measureText(t).width + 26; ctx.fillStyle = 'rgba(34,48,31,.82)';
+    ctx.beginPath(); ctx.roundRect(cx - w / 2, y - 15, w, 30, 15); ctx.fill(); ctx.fillStyle = '#fffdf5'; ctx.fillText(t, cx, y + 1);
+  };
+  if (myChairId()) {
+    if (!charging) hint(coarse ? '화면을 꾹 눌렀다 떼면 던지기 · 의자 버튼 내려놓기' : '왼쪽 버튼 꾹 → 놓으면 던지기 · X 내려놓기', cy + 100);
+    else { // wind-up gauge: yellow to red, with the damage it will do
+      const pw = chargeP(), bw = 240, bx = cx - bw / 2, by = cy + 100, full = pw >= 1;
+      ctx.fillStyle = 'rgba(34,48,31,.85)'; ctx.beginPath(); ctx.roundRect(bx - 4, by - 4, bw + 8, 22, 11); ctx.fill();
+      const g = ctx.createLinearGradient(bx, 0, bx + bw, 0); g.addColorStop(0, '#f2c230'); g.addColorStop(.6, '#ff7448'); g.addColorStop(1, '#d64545');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(bx, by, Math.max(14, bw * pw), 14, 7); ctx.fill();
+      if (full && Math.floor(performance.now() / 120) % 2) { ctx.strokeStyle = '#fffdf5'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(bx - 4, by - 4, bw + 8, 22, 11); ctx.stroke(); }
+      ctx.font = '18px Jua, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(34,48,31,.85)';
+      const label = full ? `최대! −50KG` : `−${Math.round(10 + 40 * pw)}KG`;
+      ctx.strokeText(label, cx, by - 8); ctx.fillStyle = full ? '#ff7448' : '#fffdf5'; ctx.fillText(label, cx, by - 8);
+    }
+  } else if (nearestChair()) hint(coarse ? '의자 버튼으로 의자 들기' : 'X 의자 들기', cy + 100);
+  if (!coarse && !locked()) { // tell desktop players how to grab the mouse
+    ctx.font = '16px Jua, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const t = '화면을 클릭하면 마우스로 시점을 돌려요 (Esc로 풀기)', w = ctx.measureText(t).width + 28;
+    ctx.fillStyle = 'rgba(34,48,31,.85)'; ctx.beginPath(); ctx.roundRect(cx - w / 2, cy + 40, w, 34, 17); ctx.fill();
+    ctx.fillStyle = '#fffdf5'; ctx.fillText(t, cx, cy + 58);
+  }
+}
+const projV = new THREE.Vector3();
+function toScreen(x, y, h) {
+  projV.set(x, h, y).project(camera);
+  return { x: (projV.x + 1) / 2 * innerWidth, y: (1 - projV.y) / 2 * innerHeight, ok: projV.z < 1 };
+}
+
+// ---- text overlay (names, bubbles, badges) on the 2D canvas over the 3D one ----
+function badge(x, y, txt, fill) {
+  ctx.font = '13px Jua, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const bw = ctx.measureText(txt).width + 14;
+  ctx.fillStyle = fill; ctx.strokeStyle = INK; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(x - bw / 2, y - 10, bw, 20, 10); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fffdf5'; ctx.fillText(txt, x, y + 1);
+}
+function drawLabels(p) {
+  const sc = sizeOf(p.kg), foot = toScreen(p.x, p.y, 0), head = toScreen(p.x, p.y, p.z + 50 * sc);
+  if (!foot.ok || !head.ok) return;
+  let top = head.y - 6;
+  const badges = [p.rifle > 0 && [`TRG ${p.rifle}발`, '#2b3440'], p.bat > 0 && [`방망이 ${p.bat}회`, '#c98a4b']].filter(Boolean);
+  for (const [t, c] of badges) { badge(head.x, top - 10, t, c); top -= 24; }
+  ctx.font = '15px Jua, "Gowun Dodum", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const label = (p.mine ? p.name + ' (나)' : p.name) + (p.kg ? ` · ${p.kg}KG` : '');
+  const w = ctx.measureText(label).width + 14;
+  ctx.fillStyle = p.mine ? INK : 'rgba(255,253,245,.92)';
+  ctx.beginPath(); ctx.roundRect(foot.x - w / 2, foot.y + 8, w, 21, 10); ctx.fill();
+  ctx.fillStyle = p.mine ? '#fffdf5' : INK; ctx.fillText(label, foot.x, foot.y + 11);
+  if (p.say) drawBubble(head.x, top, p.say);
+}
+function drawBubble(x, y, text) {
+  ctx.font = '15px "Gowun Dodum", sans-serif';
+  const lines = wrap(text, 190), lh = 20;
+  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 22, h = lines.length * lh + 14;
+  const bx = x - w / 2, by = y - h - 10;
+  ctx.fillStyle = '#fffdf5'; ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.roundRect(bx, by, w, h, 12);
+  ctx.moveTo(x - 7, by + h); ctx.lineTo(x, by + h + 10); ctx.lineTo(x + 7, by + h);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fffdf5'; ctx.fillRect(x - 6, by + h - 3, 12, 4); // hide outline seam under the tail
+  ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  lines.forEach((l, i) => ctx.fillText(l, x, by + 8 + i * lh));
+}
+function drawFloats(players, now) {
+  const at = new Map(players.map(p => [p.id, p]));
+  floats = floats.filter(f => now - f.start < 1100);
+  ctx.font = '22px Jua, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.lineWidth = 4;
+  for (const f of floats) {
+    const p = at.get(f.id); if (!p) continue;
+    const k = (now - f.start) / 1100, s = toScreen(p.x, p.y, p.z + 60 * sizeOf(p.kg));
+    if (!s.ok || k < 0) continue; // not landed yet
+    ctx.globalAlpha = 1 - k; ctx.strokeStyle = '#fffdf5'; ctx.strokeText(f.text, s.x, s.y - k * 40);
+    ctx.fillStyle = f.up ? '#ff7448' : '#4f8cff'; ctx.fillText(f.text, s.x, s.y - k * 40);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function frame(t) {
+  const dt = Math.min(0.05, (t - last) / 1000); last = t;
+  update(dt);
+  const stonesNow = stoneStep(t);
+  swingStep(t);
+  placeCamera(dt);
+  const players = collectPlayers(t);
+  if (gl) shotStep(t, players);
+  if (gl) {
+    gl.setPixelRatio(Math.min(devicePixelRatio || 1, coarse ? 1.5 : 2)); gl.setSize(innerWidth, innerHeight, false);
+    for (const p of players) placeAvatar(p, t);
+    placeChairs(); hurlStep(t, players);
+    dropAvatars(new Set(players.map(p => p.id)));
+    placeThings(t, stonesNow);
+    gl.render(scene, camera);
+  }
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  const far = p => camera.position.distanceToSquared(projV.set(p.x, 0, p.y));
+  players.filter(p => !(p.mine && p.ai)).map(p => [far(p), p]).sort((a, b) => b[0] - a[0]).forEach(([, p]) => drawLabels(p)); // far ones first
+  drawFloats(players, t);
+  if (me) drawCrosshair();
+  $('scopeBtn').hidden = !(myRifle() > 0); if (coarse && !myRifle()) aiming = false;
+  drawSparks(t, dt);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// self-checks
+ctx.font = '15px sans-serif';
+console.assert(wrap('가'.repeat(200), 190).length === 4, 'bubble wraps to at most 4 lines');
+console.assert(num(NaN, 0, 10) === 0 && num(99, 0, 10) === 10 && str(5, 3) === '', 'sanitizers clamp');
+console.assert(hitsWall(306, flipY(500)) && !hitsWall(306, flipY(310)) && !hitsWall(1050, 1300) && camBlocked(1000, 1150, 300), 'mirrored half: walls block, doors open; ceiling stops the camera');
+console.assert(hitsWall(2205, 600) && !hitsWall(2900, 1157) && !hitsWall(2430, 1261) && hitsWall(2600, 1261) && !hitsWall(1000, 1000, 30) && hitsWall(1030, 912, 30) && !hitsWall(1030, 912), 'corridor + meeting room door open; big bodies bump sooner');
+if (gl) console.assert(blocked(1000, 1150, 0) && !blocked(1000, 1150, 80) && groundAt(1000, 1150, 80) === 84 && JUMP_V ** 2 / 2 / GRAVITY > 84, 'the cabinet can be jumped onto');
+if (gl) console.assert(blocked(500, 500, 0) && !blocked(500, 500, 50) && groundAt(500, 500, 50) === 47 && !blocked(1050, 1020, 0) && surfaceAt(500, 500) === 47, 'desks block, you can stand on them');
+console.assert(camBlocked(1000, 1150, 40) && !camBlocked(1000, 1150, 120) && !camBlocked(1000, 1000, 40), 'camera stops at the cabinet, not above it');
+console.assert(hitsWall(306, 500) && hitsWall(1050, 600) && !hitsWall(1000, 1150) && !hitsWall(306, 310) && !hitsWall(1894, 810) && !hitsWall(1050, 1020), 'walls block, doors open');
+</script>
+</body>
+</html>

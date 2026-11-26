@@ -10,6 +10,8 @@ const { calcCompatibility }         = require('./compat_node');
 const app  = express();
 const PORT = process.env.PORT || 4567;
 
+require('./games')(app); // 릴스 게임들: express.json 보다 먼저 (요청 본문을 그대로 넘기려고)
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));

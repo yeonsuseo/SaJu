@@ -5,3 +5,4 @@ server/node_modules/
 server/saju.db
 .DS_Store
 Thumbs.db
+games/*/data.json

@@ -1,0 +1,1424 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="야구장">
+<title>야구장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1424; color: #fff; font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
+  #c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .glass { background: rgba(9, 16, 30, .8); border: 1px solid rgba(255, 255, 255, .14); border-radius: 12px; backdrop-filter: blur(6px); box-shadow: 0 6px 24px rgba(0, 0, 0, .35); }
+  button { font: inherit; cursor: pointer; }
+
+  /* 상황판 */
+  #board { position: fixed; left: 14px; top: 14px; width: 252px; padding: 12px 14px; font-size: 13px; }
+  #board .top { display: flex; align-items: center; justify-content: space-between; }
+  #board .inn { font: 24px 'Black Han Sans'; letter-spacing: 1px; }
+  #board .phase { font-size: 11px; color: #9fb0c8; }
+  #board table { width: 100%; margin: 8px 0 6px; border-collapse: collapse; }
+  #board td { padding: 3px 2px; font-weight: 700; }
+  #board td.n { text-align: right; font: 24px 'Black Han Sans'; }
+  #board tr.bat td:first-child::before { content: '▶ '; color: #ffcc33; }
+  .mid { display: flex; align-items: center; justify-content: space-between; }
+  .cnt div { display: flex; align-items: center; gap: 5px; margin: 3px 0; }
+  .cnt b { width: 14px; color: #9fb0c8; }
+  .cnt span { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, .16); }
+  .cnt .b.on { background: #3ddc84; } .cnt .s.on { background: #ffcc33; } .cnt .o.on { background: #ff5252; }
+  #dia { width: 74px; height: 60px; }
+  #dia rect { fill: rgba(255, 255, 255, .16); stroke: rgba(255, 255, 255, .5); stroke-width: 1.5; }
+  #dia rect.on { fill: #ffcc33; stroke: #fff; }
+  #board .who { margin-top: 8px; border-top: 1px solid rgba(255, 255, 255, .12); padding-top: 7px; line-height: 1.7; }
+  #board .who em { font-style: normal; color: #9fb0c8; display: inline-block; width: 34px; }
+  #board .who small { color: #9fb0c8; }
+
+  /* 역할 패널 */
+  #panel { position: fixed; right: 14px; top: 14px; width: 230px; padding: 12px; font-size: 13px; }
+  #panel h3 { margin: 0 0 8px; font-size: 13px; color: #9fb0c8; font-weight: 700; }
+  .roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .roles button { padding: 7px 0; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .06); color: #fff; font-weight: 700; }
+  .roles button.on { background: #ffcc33; color: #1a1300; border-color: #ffcc33; }
+  .q { margin-top: 10px; line-height: 1.6; }
+  .q ol { margin: 2px 0 0; padding-left: 20px; } .q li.me { color: #ffcc33; font-weight: 700; }
+  .q .none { color: #6f7f96; }
+  #recBtn { width: 100%; margin-top: 10px; padding: 8px; border-radius: 8px; border: 0; background: #2b4c9b; color: #fff; font-weight: 700; }
+
+  /* 조작 HUD */
+  #hud { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); min-width: 360px; max-width: calc(100% - 32px); padding: 10px 16px; text-align: center; font-size: 13px; }
+  #hud .types { display: flex; gap: 5px; justify-content: center; margin-bottom: 8px; flex-wrap: wrap; }
+  #hud .types span { padding: 4px 10px; border-radius: 999px; background: rgba(255, 255, 255, .08); color: #b9c6d8; font-weight: 700; }
+  #hud .types span.on { background: #ff5252; color: #fff; }
+  .gauge { height: 12px; border-radius: 6px; background: rgba(255, 255, 255, .12); overflow: hidden; margin: 6px 0; }
+  .gauge i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #3ddc84, #ffcc33 70%, #ff5252); }
+  #hud .keys { color: #b9c6d8; } #hud kbd { background: #fff; color: #111; border-radius: 4px; padding: 0 6px; font-weight: 900; font-family: inherit; }
+
+  #banner { position: fixed; left: 0; right: 0; top: 30%; text-align: center; pointer-events: none; font: 64px 'Black Han Sans'; letter-spacing: 2px; text-shadow: 0 4px 0 rgba(0, 0, 0, .5), 0 0 30px rgba(0, 0, 0, .5); opacity: 0; }
+  #banner.show { animation: pop 1.7s ease-out forwards; }
+  #banner small { display: block; font: 700 18px 'Noto Sans KR'; margin-top: 6px; color: #dfe7f2; }
+  @keyframes pop { 0% { opacity: 0; transform: scale(.6); } 12% { opacity: 1; transform: scale(1.08); } 20% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+  #pinfo { position: fixed; right: 14px; bottom: 16px; padding: 8px 12px; font-weight: 700; font-size: 14px; display: none; }
+
+  /* 기록판, 로비 */
+  .modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(3, 7, 15, .55); padding: 16px; }
+  .modal[hidden] { display: none; }
+  #records .box { width: min(860px, 100%); max-height: calc(100% - 32px); overflow: auto; padding: 18px 20px; }
+  #records h2 { margin: 0 0 4px; font: 26px 'Black Han Sans'; }
+  #records h4 { margin: 16px 0 6px; color: #9fb0c8; }
+  #records table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #records th, #records td { padding: 5px 6px; border-bottom: 1px solid rgba(255, 255, 255, .08); text-align: center; white-space: nowrap; }
+  #records th { color: #9fb0c8; font-weight: 700; } #records td:first-child, #records th:first-child { text-align: left; }
+  #records .close { float: right; border: 0; background: rgba(255, 255, 255, .1); color: #fff; border-radius: 8px; padding: 6px 12px; }
+  #lobby .box { width: min(780px, 100%); max-height: calc(100% - 16px); overflow: auto; padding: 22px 24px; text-align: center; }
+  #lobby .top2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+  @media (max-width: 640px) { #lobby .top2 { grid-template-columns: 1fr; } }
+  .pick { margin-top: 14px; text-align: left; } .pick > b { font-size: 13px; color: #9fb0c8; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+  .card { border: 2px solid rgba(255, 255, 255, .12); border-radius: 12px; padding: 8px; background: rgba(255, 255, 255, .04); cursor: pointer; text-align: center; color: #fff; }
+  .card.on { border-color: #ffcc33; background: rgba(255, 204, 51, .1); }
+  .card img { width: 100%; max-width: 120px; aspect-ratio: 150 / 190; display: block; margin: 0 auto; border-radius: 8px; background: radial-gradient(circle at 50% 35%, #33507f, #121c2e); }
+  .card .nm { font-weight: 900; margin-top: 4px; } .card .ds { font-size: 11px; color: #9fb0c8; min-height: 28px; }
+  .stat { display: flex; align-items: center; gap: 4px; font-size: 11px; margin-top: 2px; } .stat span { width: 42px; text-align: left; color: #b9c6d8; }
+  .stat i { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .12); } .stat i.on { background: #ffcc33; }
+  .hands { display: flex; gap: 6px; align-items: center; margin-top: 12px; } .hands b { font-size: 13px; color: #9fb0c8; margin-right: 6px; }
+  .hands button { padding: 7px 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .06); color: #fff; font-weight: 700; }
+  .hands button.on { background: #ffcc33; color: #1a1300; border-color: #ffcc33; }
+  #charBtn { width: 100%; margin-top: 6px; padding: 8px; border-radius: 8px; border: 0; background: rgba(255, 255, 255, .1); color: #fff; font-weight: 700; }
+  #lobby h1 { margin: 0; font: 46px 'Black Han Sans'; letter-spacing: 2px; }
+  #lobby .live { margin: 10px 0 18px; padding: 8px; border-radius: 8px; background: rgba(255, 255, 255, .07); font-weight: 700; }
+  #lobby .live.on { background: rgba(255, 82, 82, .18); color: #ffb3b3; }
+  #lobby input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .08); color: #fff; font: inherit; font-size: 16px; text-align: center; }
+  #lobby .roles { margin-top: 12px; } #lobby .roles button { padding: 12px 0; font-size: 15px; }
+  #endBtn { width: 100%; margin-top: 6px; padding: 8px; border-radius: 8px; border: 1px solid rgba(255, 90, 90, .5); background: transparent; color: #ff8a8a; font-weight: 700; }
+  #endBtn.arm { background: #d33; color: #fff; }
+  #charBtn:disabled { opacity: .5; }
+  .modes { margin-top: 12px; font-size: 12px; color: #9fb0c8; text-align: left; } .modes .roles { margin-top: 4px !important; }
+  .modes .roles.two { grid-template-columns: repeat(2, 1fr); }
+  #pickMsg { min-height: 18px; margin-top: 8px; color: #ff8a8a; font-size: 13px; }
+  #room .box { width: min(720px, 100%); max-height: calc(100% - 16px); overflow: auto; padding: 20px 22px; }
+  #room h2 { margin: 0 0 8px; font: 30px 'Black Han Sans'; text-align: center; }
+  #roomLive { padding: 8px; border-radius: 8px; background: rgba(255, 255, 255, .07); font-weight: 700; text-align: center; }
+  #roomLive.on { background: rgba(255, 82, 82, .18); color: #ffb3b3; }
+  .teams { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; margin-top: 14px; align-items: stretch; }
+  .team { border-radius: 12px; padding: 10px 12px; min-height: 120px; }
+  .team.t0 { background: rgba(43, 76, 155, .35); border: 1px solid rgba(110, 150, 255, .4); }
+  .team.t1 { background: rgba(170, 30, 40, .3); border: 1px solid rgba(255, 110, 110, .4); }
+  .team h4 { margin: 0 0 6px; font-size: 15px; } .team h4 small { color: #9fb0c8; font-weight: 400; }
+  .team ul { list-style: none; margin: 0; padding: 0; line-height: 1.9; font-size: 14px; }
+  .team li.me { color: #ffcc33; font-weight: 700; } .team li .tag { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: rgba(255, 255, 255, .12); margin-left: 4px; }
+  .team li .ok { color: #5fe08a; } .team li .wait { color: #8a99ae; } .team li.ai { color: #9fb0c8; font-style: italic; }
+  .vs { align-self: center; font: 22px 'Black Han Sans'; color: #ffcc33; }
+  #warns { margin-top: 10px; font-size: 13px; line-height: 1.7; } #warns div { padding: 6px 10px; border-radius: 8px; margin-top: 4px; background: rgba(255, 196, 0, .14); color: #ffd866; }
+  #warns div.bad { background: rgba(255, 82, 82, .18); color: #ffb3b3; }
+  .mine { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .mine b { display: block; font-size: 12px; color: #9fb0c8; margin-bottom: 4px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .seg button, .rbtns button { padding: 10px 0; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .2); background: rgba(255, 255, 255, .06); color: #fff; font-weight: 700; font-size: 14px; }
+  .seg button.on { background: #ffcc33; color: #1a1300; border-color: #ffcc33; } .seg button:disabled, .rbtns button:disabled { opacity: .45; }
+  .rbtns { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 6px; margin-top: 12px; }
+  .rbtns #readyBtn, .rbtns #reqBtn { background: #2a9d55; border-color: #2a9d55; font-size: 16px; } .rbtns #readyBtn.on { background: #555; border-color: #777; }
+  #others { margin-top: 10px; font-size: 12px; color: #9fb0c8; }
+  #toasts { position: fixed; left: 50%; top: 14px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; z-index: 30; pointer-events: none; }
+  #toasts div { padding: 8px 16px; border-radius: 20px; background: rgba(10, 16, 30, .88); border: 1px solid rgba(255, 255, 255, .15); font-weight: 700; font-size: 14px; animation: tin .25s; }
+  @keyframes tin { from { opacity: 0; transform: translateY(-8px); } }
+  #reqs { position: fixed; left: 50%; top: 150px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 31; }
+  #reqs div { padding: 10px 14px; border-radius: 12px; background: rgba(20, 30, 55, .95); border: 1px solid #ffcc33; font-weight: 700; display: flex; gap: 8px; align-items: center; }
+  #reqs button { padding: 6px 12px; border-radius: 8px; border: 0; font-weight: 700; color: #fff; background: #2a9d55; } #reqs button.no { background: #555; }
+  #myState { padding: 7px 9px; border-radius: 8px; background: rgba(255, 255, 255, .07); font-weight: 700; }
+  #roomBtn { width: 100%; margin-top: 8px; padding: 8px; border-radius: 8px; border: 0; background: #ffcc33; color: #1a1300; font-weight: 700; }
+  @media (max-width: 560px) { .teams { grid-template-columns: 1fr; } .vs { justify-self: center; } .rbtns { grid-template-columns: 1fr 1fr; } }
+  #lobby .help { margin-top: 16px; font-size: 12px; color: #9fb0c8; line-height: 1.7; text-align: left; }
+  #over { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); padding: 16px 26px; text-align: center; display: none; }
+  #over b { display: block; font: 40px 'Black Han Sans'; }
+  /* touch: two thumbs in landscape, hold the left one to charge, tap the right one to fire (like F + D) */
+  #c { touch-action: none; }
+  #touch { position: fixed; inset: auto 0 0 0; pointer-events: none; display: none; }
+  body.touch #touch:not([hidden]) { display: block; }
+  #touch button { position: fixed; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    border-radius: 50%; border: 2px solid rgba(255, 255, 255, .5); background: rgba(10, 16, 30, .55); color: #fff; font-weight: 900; font-size: 15px; }
+  #touch button.on { background: #ffcc33; color: #1a1300; border-color: #ffcc33; }
+  #tCharge { left: max(16px, env(safe-area-inset-left)); bottom: 18px; width: 92px; height: 92px; }
+  #tFire { right: max(16px, env(safe-area-inset-right)); bottom: 18px; width: 92px; height: 92px; background: rgba(255, 82, 82, .6) !important; }
+  #tAlt { right: max(120px, calc(env(safe-area-inset-right) + 104px)); bottom: 26px; width: 66px; height: 66px; font-size: 13px; }
+  #menuBtn { display: none; position: fixed; right: max(10px, env(safe-area-inset-right)); top: 10px; z-index: 20; width: 44px; height: 44px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .3); background: rgba(10, 16, 30, .7); color: #fff; font-size: 22px; }
+  body.touch #panel.open { top: 60px; }
+  #iosTip { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); z-index: 40; width: min(420px, calc(100% - 32px)); padding: 10px 14px; border-radius: 12px; background: rgba(20, 30, 55, .95); border: 1px solid #ffcc33; font-size: 14px; line-height: 1.6; text-align: center; }
+  #iosTip button { margin-left: 6px; padding: 3px 10px; border-radius: 8px; border: 0; background: #ffcc33; color: #1a1300; font-weight: 700; }
+  html, body { height: 100%; touch-action: manipulation; } /* no double-tap zoom */ body { min-height: 100dvh; }
+  #rotate { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; text-align: center; background: #05070c; font-size: 20px; font-weight: 700; line-height: 1.8; }
+  @media (orientation: portrait) { body.touch.playing #rotate { display: flex; } }
+  /* short landscape screens (phones): smaller boards, no queue lists, the hud above the thumb buttons */
+  @media (max-height: 500px) {
+    #board { transform: scale(.8); transform-origin: top left; left: 8px; top: 8px; }
+    #panel { transform: scale(.8); transform-origin: top right; right: 8px; top: 8px; bottom: auto; }
+    #panel .q { display: none; }
+    body.touch #panel:not(.open) { display: none; }
+    body.touch.playing #menuBtn { display: block; }
+    #hud { bottom: 8px; min-width: 0; max-width: calc(100% - 300px); padding: 6px 10px; font-size: 13px; }
+    #banner { font-size: 36px; top: 22%; }
+    #lobby .box, #room .box { max-height: calc(100% - 8px); padding: 12px 14px; }
+    #room h2, #lobby h1 { font-size: 24px; margin: 0 0 4px; } .team { min-height: 0; padding: 6px 10px; } .teams { margin-top: 8px; } #warns { font-size: 12px; }
+  }
+  body.touch #hud .keys { display: none; }
+  body.touch #hud:not(:has(.gauge, .types)) { display: none; } /* only key hints inside: nothing to show on a phone */
+  body.touch #board .who { display: none; }
+  body.touch #pinfo { bottom: auto; top: 10px; right: 64px; }
+  body.touch #board { width: 200px; }
+  #chat { position: fixed; left: max(14px, env(safe-area-inset-left)); bottom: 16px; width: min(380px, calc(100% - 28px)); display: flex; gap: 6px; z-index: 15; }
+  #chat input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 9px 12px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, .3); background: rgba(10, 16, 30, .85); color: #fff; }
+  #chat button { padding: 0 14px; border-radius: 12px; border: 0; background: #ffcc33; color: #1a1300; font-weight: 700; }
+  #chat:not(:focus-within) { opacity: .55; } #chat:not(:focus-within) button { display: none; }
+  #feed { position: fixed; left: max(14px, env(safe-area-inset-left)); bottom: 64px; width: min(380px, calc(100% - 28px)); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; pointer-events: none; z-index: 14; }
+  #feed .msg { font-size: 15px; line-height: 1.4; overflow-wrap: anywhere; max-width: 100%; background: rgba(10, 16, 30, .82); padding: 6px 12px; border-radius: 12px; overflow: hidden; animation: feedIn .45s ease-out; }
+  #feed .msg b { color: var(--c); text-shadow: 0 0 1px #000; }
+  @keyframes feedIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { #feed .msg { animation: none; } }
+  body.touch #chat { left: 50%; transform: translateX(-50%); bottom: auto; top: 10px; width: min(300px, calc(100% - 520px)); }
+  body.touch #feed .msg { font-size: 12px; padding: 4px 10px; }
+  body.touch #feed { gap: 4px; bottom: auto; top: 180px; left: max(14px, env(safe-area-inset-left)); width: min(300px, 40%); }
+  #net { position: fixed; left: 50%; top: 10px; transform: translateX(-50%); padding: 4px 12px; font-size: 12px; display: none; }
+  @media (max-width: 760px) { #panel { top: auto; bottom: 120px; } #board { width: 200px; } #banner { font-size: 40px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="board" class="glass">
+  <div class="top"><div class="inn" id="inn">1회 초</div><div class="phase" id="phase">대기 중</div></div>
+  <table><tr id="rowA"><td>원정</td><td class="n" id="scA">0</td></tr><tr id="rowH"><td>홈</td><td class="n" id="scH">0</td></tr></table>
+  <div class="mid">
+    <div class="cnt">
+      <div><b>B</b><span class="b"></span><span class="b"></span><span class="b"></span></div>
+      <div><b>S</b><span class="s"></span><span class="s"></span></div>
+      <div><b>O</b><span class="o"></span><span class="o"></span></div>
+    </div>
+    <svg id="dia" viewBox="0 0 74 60"><rect id="b2" x="30" y="6" width="14" height="14" transform="rotate(45 37 13)"/><rect id="b1" x="52" y="26" width="14" height="14" transform="rotate(45 59 33)"/><rect id="b3" x="8" y="26" width="14" height="14" transform="rotate(45 15 33)"/></svg>
+  </div>
+  <div class="who">
+    <div><em>투수</em><span id="wP">-</span> <small id="wPs"></small></div>
+    <div><em>타자</em><span id="wB">-</span> <small id="wBs"></small></div>
+    <div><em>다음</em><small id="wN">-</small></div>
+  </div>
+</div>
+
+<div id="panel" class="glass" hidden>
+  <h3>내 역할</h3>
+  <div id="myState">-</div>
+  <button id="roomBtn">대기실 · 팀 보기</button>
+  <div class="q"><b id="qBh">타순</b><ol id="qB"></ol></div>
+  <div class="q"><b id="qPh">투수 대기</b><ol id="qP"></ol></div>
+  <div class="q"><b>대기 · 관전</b> <span id="qW" class="none"></span></div>
+  <button id="recBtn">기록판 보기 (Tab)</button>
+  <button id="charBtn">선수 교체 (캐릭터 · 손)</button>
+  <button id="endBtn">경기 강제종료</button>
+</div>
+
+<div id="hud" class="glass" hidden></div>
+<form id="chat" hidden><input id="say" maxlength="80" autocomplete="off" placeholder="Enter를 누르고 말해보세요" aria-label="채팅"><button>말하기</button></form>
+<div id="feed" aria-live="polite" aria-label="최근 대화"></div>
+<button id="menuBtn" aria-label="메뉴">☰</button>
+<div id="touch" hidden><button id="tCharge">힘<br>꾹</button><button id="tAlt">번트</button><button id="tFire">스윙</button></div>
+<div id="rotate">📱↻<br>휴대폰을 가로로 돌려 주세요</div>
+<div id="iosTip" hidden>아이폰은 주소창을 없애려면 <b>공유 버튼 → 홈 화면에 추가</b> 후, 홈 화면 아이콘으로 열어 주세요 <button>닫기</button></div>
+<div id="banner"></div>
+<div id="pinfo" class="glass"></div>
+<div id="over" class="glass"></div>
+<div id="net" class="glass">서버에 다시 연결하는 중…</div>
+
+<div id="records" class="modal" hidden><div class="box glass">
+  <button class="close" id="recClose">닫기</button>
+  <h2>기록판</h2><div id="recBody"></div>
+</div></div>
+
+<div id="room" class="modal" hidden><div class="box glass">
+  <h2>대기실</h2>
+  <div id="roomLive"></div>
+  <div class="teams"><div class="team t0"><h4>원정팀 <small>먼저 공격</small></h4><ul id="tA"></ul></div><div class="vs">VS</div><div class="team t1"><h4>홈팀 <small>먼저 수비</small></h4><ul id="tH"></ul></div></div>
+  <div id="warns"></div>
+  <div class="mine">
+    <div><b>내 팀</b><div class="seg" id="segTeam"><button data-t="0">원정</button><button data-t="1">홈</button></div></div>
+    <div><b>내 포지션</b><div class="seg" id="segPos"><button data-p="batter">타자</button><button data-p="pitcher">투수</button></div></div>
+  </div>
+  <div class="rbtns"><button id="readyBtn">준비완료</button><button id="reqBtn" hidden>같이하기 요청</button><button id="charBtn2">캐릭터</button><button id="watchBtn">관전</button><button id="roomClose">경기 보기</button></div>
+  <div id="others"></div>
+</div></div>
+<div id="toasts"></div><div id="reqs"></div>
+
+<div id="lobby" class="modal"><div class="box glass">
+  <h1>⚾ 야구장</h1>
+  <div class="live" id="live">불러오는 중…</div>
+  <input id="nick" maxlength="10" placeholder="닉네임 (최대 10자)" autocomplete="off">
+  <div class="pick"><b>타자 캐릭터</b><div class="cards" id="pickBat"></div></div>
+  <div class="pick"><b>투수 캐릭터</b><div class="cards" id="pickPit"></div></div>
+  <div class="hands"><b>던지고 치는 손</b><button data-h="R">오른손</button><button data-h="L">왼손</button></div>
+  <div id="pickMsg"></div>
+  <div class="roles" style="grid-template-columns:2fr 1fr"><button data-r="enter">입장하기</button><button data-r="watch">관전만 할게요</button></div>
+  <div class="help">
+    <b>타자</b> · 마우스로 스트라이크존에 스윙 라인을 그려 두고, 공이 오면 <b>F</b>를 꾹 눌러 힘을 모은 채 <b>D</b>로 휘둘러요. <b>S</b>를 꾹 누르고 있으면 번트 자세예요.<br>
+    <b>투수</b> · <b>C</b>로 구종 선택, 방향키(또는 클릭)로 코스 지정, <b>F</b>를 꾹 눌러 힘을 모으고 <b>D</b>로 던져요.<br>
+    입장하면 대기실에서 팀(원정/홈)과 포지션(타자/투수)을 고르고, 모두 준비완료를 누르면 경기가 시작돼요. 경기 중에 들어오면 같이하기 요청을 보낼 수 있어요.<br>
+    타순이 오면 자동으로 타석에 서요. 기다리는 동안은 관전해요. 9회말이 끝나면 경기가 새로 시작돼요.<br>
+    경기 중 <b>선수 교체</b>(캐릭터·손 바꾸기)는 한 회에 한 번만 할 수 있어요. 아무 참가자나 <b>경기 강제종료</b>를 누를 수 있어요.
+  </div>
+</div></div>
+
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- constants (keep in sync with server.js) ----------
+const CONTACT_T = 0.15;            // SWING_LAG: D pressed -> bat reaches the plate
+const D2R = Math.PI / 180;
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v)), lerp = (a, b, t) => a + (b - a) * t;
+const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
+const fenceAt = d => 100 + 22 * Math.cos(d * Math.PI / 90);
+const BASES = [V(0, 0, 0), V(19.4, 0, -19.4), V(0, 0, -38.8), V(-19.4, 0, -19.4), V(0, 0, 0)];
+const TYPES = [['FB', '직구'], ['CU', '커브'], ['SL', '슬라이더'], ['CH', '체인지업'], ['FK', '포크']];
+// characters: names/order match BAT_CHARS / PIT_CHARS in server.js. stats = 1-5 bars in the picker, look = how they are drawn
+const CHARS = {
+  bat: [
+    { name: '강타왕 곰', desc: '한 방이 무서운 거포', stats: { 키: 5, 덩치: 5, 힘: 5, 정확도: 2, 타이밍: 2, 주력: 1 }, look: { size: 1.07, bulk: 1.3, skin: 0xb98563, beard: true, bat: 0x5a3a22 } },
+    { name: '정확한 여우', desc: '어떤 공이든 맞혀 내는 교타자', stats: { 키: 3, 덩치: 3, 힘: 3, 정확도: 5, 타이밍: 5, 주력: 3 }, look: { size: 1.0, bulk: 1.0, skin: 0xe8b98f, glasses: true, bat: 0xd8b07a } },
+    { name: '번개 치타', desc: '번트와 내야안타의 달인', stats: { 키: 2, 덩치: 2, 힘: 2, 정확도: 4, 타이밍: 4, 주력: 5 }, look: { size: 0.94, bulk: 0.85, skin: 0xd99c72, eyeblack: true, bat: 0x222222 } },
+  ],
+  pit: [
+    { name: '파이어볼러', desc: '불같은 강속구, 제구는 거칠어요', stats: { 속도: 5, 정확도: 2, 변화구력: 2, 힘: 5 }, look: { size: 1.08, bulk: 1.25, skin: 0xc68d68, beard: true } },
+    { name: '제구 마스터', desc: '원하는 곳에 정확히 꽂아요', stats: { 속도: 3, 정확도: 5, 변화구력: 3, 힘: 3 }, look: { size: 1.0, bulk: 1.0, skin: 0xeec3a0, glasses: true } },
+    { name: '변화구 마법사', desc: '춤추듯 휘는 변화구', stats: { 속도: 2, 정확도: 3, 변화구력: 5, 힘: 3 }, look: { size: 0.97, bulk: 0.9, skin: 0xdcae86, pony: true } },
+  ],
+};
+const HOME = { shirt: 0xf4f4f4, pants: 0xf4f4f4, cap: 0xc8102e, socks: 0xc8102e };
+const AWAY = { shirt: 0x2b4c9b, pants: 0xbac2cf, cap: 0x14213d, socks: 0x14213d };
+const UMP = { shirt: 0x1b1b1b, pants: 0x555a63, cap: 0x111111, socks: 0x111111 };
+const IN_PLAY = k => !['ball', 'strike', 'miss', 'foul', 'HBP'].includes(k);
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- renderer / scene ----------
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+// iPhone ignores user-scalable=no: block pinch zoom here (a zoomed page leaves the game stuck)
+for (const ev of ['gesturestart', 'gesturechange']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+const TOUCH = matchMedia('(pointer: coarse)').matches;
+if (TOUCH) document.body.classList.add('touch');
+renderer.setPixelRatio(Math.min(devicePixelRatio, TOUCH ? 1.5 : 2)); // phones: fewer pixels, steadier frame rate
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 900); camera.position.set(1.3, 2.9, 6.4);
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+
+{ // dusk sky
+  const c = document.createElement('canvas'); c.width = 4; c.height = 512; const x = c.getContext('2d');
+  const gr = x.createLinearGradient(0, 0, 0, 512);
+  gr.addColorStop(0, '#0a1630'); gr.addColorStop(0.45, '#27406f'); gr.addColorStop(0.62, '#7b6f8f'); gr.addColorStop(0.72, '#e39a6b'); gr.addColorStop(1, '#2b2a33');
+  x.fillStyle = gr; x.fillRect(0, 0, 4, 512);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; scene.background = t;
+}
+scene.fog = new THREE.Fog(0x3a4060, 170, 420);
+scene.add(new THREE.HemisphereLight(0xc9dcff, 0x34502a, 1.1));
+const sun = new THREE.DirectionalLight(0xfff1dc, 2.6);
+sun.position.set(-35, 80, 45); sun.target.position.set(0, 0, -30);
+sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -70, right: 70, top: 70, bottom: -70, near: 10, far: 220 });
+sun.shadow.bias = -0.0004;
+scene.add(sun, sun.target);
+
+const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, ...o });
+function mesh(geo, m, x = 0, y = 0, z = 0, parent = scene) { const me = new THREE.Mesh(geo, m); me.position.set(x, y, z); parent.add(me); return me; }
+
+// ---------- field ----------
+{
+  const S = 2048, k = S / 300, P = (wx, wz) => [(wx + 150) * k, (wz + 230) * k];
+  const c = document.createElement('canvas'); c.width = c.height = S; const x = c.getContext('2d');
+  const arc = (extra = 0) => { x.beginPath(); x.moveTo(...P(0, 0)); for (let d = -45; d <= 45; d++) { const r = fenceAt(d) + extra, a = d * D2R; x.lineTo(...P(Math.sin(a) * r, -Math.cos(a) * r)); } x.closePath(); };
+  const circ = (wx, wz, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(...P(wx, wz), r * k, 0, Math.PI * 2); x.fill(); };
+  x.fillStyle = '#2d6428'; x.fillRect(0, 0, S, S);
+  x.save(); arc(6); x.clip();
+  for (let i = 0; i < 44; i++) { x.fillStyle = i % 2 ? '#3d8235' : '#357530'; x.fillRect(0, P(0, -230 + i * 7)[1], S, 7 * k); }
+  x.restore();
+  x.save(); arc(6); x.lineWidth = 9 * k; x.strokeStyle = '#9b6a42'; x.stroke(); x.restore(); // warning track
+  const DIRT = '#b5794b';
+  circ(0, -18.4, 29, DIRT);
+  x.fillStyle = '#3d8235'; x.beginPath(); // infield grass
+  [[0, -3.6], [15.8, -19.4], [0, -35.2], [-15.8, -19.4]].forEach(([a, b], i) => x[i ? 'lineTo' : 'moveTo'](...P(a, b))); x.fill();
+  for (let i = 0; i < 4; i++) circ(BASES[i].x, BASES[i].z, i ? 2.8 : 4.2, DIRT);
+  circ(0, -18.44, 2.9, DIRT);
+  x.strokeStyle = '#f4f1ea'; x.lineWidth = 2.2;
+  for (const s of [-1, 1]) { x.beginPath(); x.moveTo(...P(0, 0)); x.lineTo(...P(s * 76, -76)); x.stroke(); }
+  x.lineWidth = 1.6;
+  for (const s of [-1, 1]) x.strokeRect(...P(s > 0 ? 0.32 : -1.54, -0.9), 1.22 * k, 1.8 * k); // batter's boxes
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const ground = mesh(new THREE.PlaneGeometry(300, 300), mat(0xffffff, { map: tex, roughness: 1 }), 0, 0, -80);
+  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true;
+  const outer = mesh(new THREE.PlaneGeometry(1400, 1400), mat(0x1c2a1b), 0, -0.05, -80); outer.rotation.x = -Math.PI / 2;
+  // plate, bases, mound, rubber
+  const plate = new THREE.Shape([[-0.215, 0], [0.215, 0], [0.215, 0.215], [0, 0.43], [-0.215, 0.215]].map(([a, b]) => new THREE.Vector2(a, b)));
+  const hp = mesh(new THREE.ExtrudeGeometry(plate, { depth: 0.02, bevelEnabled: false }), mat(0xffffff), 0, 0.02, -0.0); hp.rotation.x = Math.PI / 2; hp.receiveShadow = true;
+  for (let i = 1; i < 4; i++) { const b = mesh(new THREE.BoxGeometry(0.38, 0.08, 0.38), mat(0xffffff), BASES[i].x, 0.04, BASES[i].z); b.rotation.y = Math.PI / 4; b.castShadow = true; }
+  const mound = mesh(new THREE.CylinderGeometry(2.2, 2.9, 0.25, 40), mat(0xb5794b, { roughness: 1 }), 0, 0.125, -18.44); mound.receiveShadow = true;
+  mesh(new THREE.BoxGeometry(0.61, 0.03, 0.15), mat(0xffffff), 0, 0.26, -18.44);
+}
+
+// ---------- stands, wall, crowd, lights, big screen ----------
+const TIERS = 24;
+const standR = a => { const d = Math.abs(a) / D2R; return d <= 45 ? fenceAt(d) : Math.min(fenceAt(45), 22 / Math.sin(Math.abs(a) - Math.PI / 4)); };
+{
+  const N = 360, pos = [], col = [], idx = [], C = new THREE.Color();
+  // a band of quads all the way round, from (r0(a), h0) to (r1(a), h1)
+  const ring = (r0, h0, r1, h1, colorAt) => {
+    const base = pos.length / 3;
+    for (let i = 0; i <= N; i++) {
+      const a = -Math.PI + 2 * Math.PI * i / N, s = Math.sin(a), c = -Math.cos(a);
+      colorAt(i, C);
+      pos.push(s * r0(a), h0, c * r0(a), s * r1(a), h1, c * r1(a)); col.push(C.r, C.g, C.b, C.r, C.g, C.b);
+      if (i < N) { const v = base + i * 2; idx.push(v, v + 2, v + 1, v + 1, v + 2, v + 3); }
+    }
+  };
+  const seats = [0x1f4fa8, 0x2a62c4, 0xb3263a, 0x1f4fa8].map(h => new THREE.Color(h));
+  ring(standR, 0, standR, 3.4, (i, c) => c.set(0x1d4a36));
+  ring(standR, 3.4, standR, 3.62, (i, c) => c.set(0xf2c230));
+  for (let t = 0; t < TIERS; t++) {
+    const h = 3.62 + t * 0.62, r0 = a => standR(a) + t * 1.05, r1 = a => standR(a) + (t + 1) * 1.05;
+    ring(r0, h - 0.62, r0, h, (i, c) => c.copy(seats[(i / 18 | 0) % 4]).multiplyScalar(0.55));
+    ring(r0, h, r1, h, (i, c) => c.copy(seats[(i / 18 | 0) % 4]));
+  }
+  const top = 3.62 + TIERS * 0.62, rOut = a => standR(a) + TIERS * 1.05;
+  ring(rOut, top, rOut, top + 3, (i, c) => c.set(0x2a2f3a));
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  const stands = mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide, flatShading: true }));
+  stands.receiveShadow = true;
+
+  // crowd: one box per fan
+  const spots = [];
+  for (let t = 0; t < TIERS; t++) {
+    for (let a = -Math.PI; a < Math.PI;) {
+      const r = standR(a) + t * 1.05 + 0.55; a += 0.62 / r;
+      if (Math.random() < 0.82) spots.push([a, r, 3.62 + t * 0.62]);
+    }
+  }
+  const fans = new THREE.InstancedMesh(new THREE.BoxGeometry(0.42, 0.75, 0.32), mat(0xffffff), spots.length);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = V(), shirts = [0xffffff, 0xc8102e, 0x2b4c9b, 0xf2c230, 0x222222, 0x3ddc84, 0xff8fb1, 0xe8e0d0, 0x8a5a3c];
+  spots.forEach(([a, r, h], i) => {
+    const s = 0.85 + Math.random() * 0.3; sc.set(s, s, s);
+    q.setFromAxisAngle(V(0, 1, 0), -a);
+    m4.compose(V(Math.sin(a) * r, h + 0.37 * s, -Math.cos(a) * r), q, sc); fans.setMatrixAt(i, m4);
+    fans.setColorAt(i, C.set(shirts[i * 7919 % shirts.length]).multiplyScalar(0.7 + Math.random() * 0.3));
+  });
+  scene.add(fans);
+
+  for (const s of [-1, 1]) { // foul poles
+    const a = 45 * D2R, r = fenceAt(45);
+    mesh(new THREE.CylinderGeometry(0.18, 0.18, 26, 8), mat(0xf2c230, { emissive: 0x332600 }), s * Math.sin(a) * r, 13, -Math.cos(a) * r);
+  }
+  for (const d of [-52, 52, -118, 118]) { // light towers
+    const a = d * D2R, r = standR(a) + TIERS * 1.05 + 4, x = Math.sin(a) * r, z = -Math.cos(a) * r;
+    mesh(new THREE.CylinderGeometry(0.5, 0.8, 50, 8), mat(0x5a606c), x, 25, z);
+    const head = mesh(new THREE.BoxGeometry(10, 6, 1), mat(0xfffbe8, { emissive: 0xfff4cc, emissiveIntensity: 2.2 }), x, 52, z);
+    head.lookAt(0, 0, -30);
+  }
+}
+// big screen in center field, redrawn when the line score changes
+const bigCv = document.createElement('canvas'); bigCv.width = 1024; bigCv.height = 330;
+const bigTex = new THREE.CanvasTexture(bigCv); bigTex.colorSpace = THREE.SRGBColorSpace;
+{
+  const z = -(fenceAt(0) + TIERS * 1.05 + 8);
+  mesh(new THREE.BoxGeometry(37, 13, 1), mat(0x15181f), 0, 27, z - 0.6);
+  mesh(new THREE.PlaneGeometry(35, 11.3), new THREE.MeshBasicMaterial({ map: bigTex, toneMapped: false }), 0, 27, z);
+  mesh(new THREE.BoxGeometry(2, 21, 2), mat(0x2a2f3a), -10, 10, z - 1); mesh(new THREE.BoxGeometry(2, 21, 2), mat(0x2a2f3a), 10, 10, z - 1);
+}
+let bigKey = '';
+function drawBig(g) {
+  const key = JSON.stringify([g.line, g.score, g.hits, g.errs, g.inning, g.half, g.balls, g.strikes, g.outs]);
+  if (key === bigKey) return; bigKey = key;
+  const x = bigCv.getContext('2d');
+  x.fillStyle = '#05070c'; x.fillRect(0, 0, 1024, 330);
+  x.font = '900 34px "Noto Sans KR", sans-serif'; x.textBaseline = 'middle'; x.textAlign = 'center';
+  const col = i => 150 + i * 62;
+  x.fillStyle = '#ffcc33';
+  for (let i = 0; i < 9; i++) x.fillText(i + 1, col(i), 50);
+  x.fillText('R', col(9) + 14, 50); x.fillText('H', col(10) + 14, 50); x.fillText('E', col(11) + 14, 50);
+  ['원정', '홈'].forEach((n, t) => {
+    const y = 125 + t * 80;
+    x.textAlign = 'left'; x.fillStyle = '#fff'; x.fillText(n, 30, y); x.textAlign = 'center';
+    for (let i = 0; i < 9; i++) { const v = g.line[t][i]; x.fillStyle = i === g.inning - 1 && t === g.half ? '#ffcc33' : '#e9eef7'; if (v != null) x.fillText(v, col(i), y); }
+    x.fillStyle = '#ff5252'; x.fillText(g.score[t], col(9) + 14, y); x.fillStyle = '#e9eef7'; x.fillText(g.hits[t], col(10) + 14, y); x.fillText(g.errs?.[t] ?? 0, col(11) + 14, y);
+  });
+  x.font = '900 30px "Noto Sans KR", sans-serif'; x.textAlign = 'left';
+  const dots = (lab, n, max, c, x0) => { x.fillStyle = '#9fb0c8'; x.fillText(lab, x0, 292); for (let i = 0; i < max; i++) { x.fillStyle = i < n ? c : '#2a2f3a'; x.beginPath(); x.arc(x0 + 44 + i * 34, 292, 12, 0, 7); x.fill(); } };
+  dots('B', g.balls, 3, '#3ddc84', 300); dots('S', g.strikes, 2, '#ffcc33', 480); dots('O', g.outs, 2, '#ff5252', 630);
+  bigTex.needsUpdate = true;
+}
+
+// ---------- people: a jointed body posed by keyframes + two-bone IK for arms and legs ----------
+const SKIN = 0xe0ac85, DN = V(0, -1, 0), UPV = V(0, 1, 0);
+const batGeo = new THREE.LatheGeometry([[0, -0.07], [0.03, -0.07], [0.03, -0.055], [0.015, -0.045], [0.014, 0.25], [0.022, 0.42], [0.033, 0.6], [0.034, 0.78], [0.025, 0.8], [0, 0.8]].map(([r, y]) => new THREE.Vector2(r, y)), 14);
+const batMat = mat(0xc99b5e, { roughness: 0.5 });
+// upper arm in one piece: a rounded deltoid that tapers down to the elbow (no ball joint at the shoulder)
+const upperArmGeo = new THREE.LatheGeometry([[0, 0.03], [0.04, 0.022], [0.062, 0], [0.066, -0.05], [0.06, -0.12], [0.053, -0.2], [0.048, -0.26], [0.045, -0.29], [0.03, -0.31], [0, -0.315]].reverse().map(([r, y]) => new THREE.Vector2(r, y)), 16);
+// torso (spine frame): waist, chest, then shoulders that roll over and slope up to the neck
+const torsoGeo = new THREE.LatheGeometry([[0, -0.03], [0.12, -0.02], [0.14, 0.06], [0.142, 0.16], [0.158, 0.27], [0.168, 0.36], [0.166, 0.41], [0.15, 0.452], [0.115, 0.485], [0.075, 0.51], [0.05, 0.525], [0, 0.53]].map(([r, y]) => new THREE.Vector2(r, y)), 22);
+function makeGuy(team, opt = {}) {
+  const L = opt.look || {}, bulk = L.bulk || 1, thick = Math.pow(bulk, 0.7);
+  const m = { shirt: mat(team.shirt), pants: mat(team.pants), cap: mat(team.cap), sock: mat(team.socks), skin: mat(L.skin || SKIN), shoe: mat(0x161616), dark: mat(0x111111) };
+  const root = new THREE.Group(), J = {};
+  const add = (parent, geo, mm, x = 0, y = 0, z = 0) => { const me = mesh(geo, mm, x, y, z, parent); me.castShadow = true; return me; };
+  const grp = (parent, x, y, z, name) => { const gg = new THREE.Group(); gg.position.set(x, y, z); gg.rotation.order = 'YXZ'; parent.add(gg); J[name] = gg; return gg; };
+  const hips = grp(root, 0, 0.9, 0, 'hips');
+  const pelvis = add(hips, new THREE.CapsuleGeometry(0.13, 0.12, 4, 10), m.pants); pelvis.rotation.z = Math.PI / 2; pelvis.scale.set(1, bulk, thick);
+  const spine = grp(hips, 0, 0.04, 0, 'spine');
+  add(spine, torsoGeo, m.shirt).scale.set(1.12 * bulk, 1, 0.72 * bulk);
+  add(spine, new THREE.CylinderGeometry(0.05, 0.055, 0.1, 8), m.skin, 0, 0.5, 0);
+  const head = grp(spine, 0, 0.55, 0, 'head');
+  add(head, new THREE.SphereGeometry(0.115, 16, 12), m.skin, 0, 0.1, 0);
+  for (const s of [-1, 1]) add(head, new THREE.SphereGeometry(0.014, 6, 4), m.dark, s * 0.04, 0.12, 0.105);
+  const hair = mat(0x2a1a10);
+  if (L.beard) add(head, new THREE.SphereGeometry(0.1, 12, 8), hair, 0, 0.045, 0.035).scale.set(1.05, 0.7, 0.85);
+  if (L.glasses) { for (const s of [-1, 1]) add(head, new THREE.TorusGeometry(0.026, 0.006, 6, 14), m.dark, s * 0.042, 0.122, 0.112); add(head, new THREE.BoxGeometry(0.03, 0.006, 0.006), m.dark, 0, 0.124, 0.115); }
+  if (L.eyeblack) for (const s of [-1, 1]) add(head, new THREE.BoxGeometry(0.035, 0.014, 0.01), m.dark, s * 0.043, 0.093, 0.108);
+  if (L.pony) add(head, new THREE.CapsuleGeometry(0.03, 0.13, 4, 8), hair, 0, 0.04, -0.13).rotation.x = 0.45;
+  if (opt.helmet) {
+    add(head, new THREE.SphereGeometry(0.135, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.56), m.cap, 0, 0.1, -0.01);
+    add(head, new THREE.BoxGeometry(0.03, 0.1, 0.1), m.cap, 0.125, 0.06, 0.0);
+    add(head, new THREE.BoxGeometry(0.2, 0.012, 0.08), m.cap, 0, 0.13, 0.13);
+  } else {
+    add(head, new THREE.SphereGeometry(0.122, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), m.cap, 0, 0.12, 0);
+    add(head, new THREE.BoxGeometry(0.17, 0.012, 0.11), m.cap, 0, 0.125, 0.14);
+  }
+  const shW = 0.19 * bulk; // the torso's shoulder edge (the torso widens with bulk, so do the shoulders); the arm pivots just under the deltoid
+  for (const s of [1, -1]) {
+    const k = s > 0 ? 'L' : 'R';
+    const sh = grp(spine, shW * s, 0.43, 0, 'sh' + k); add(sh, upperArmGeo, m.shirt).scale.set(thick, 1, thick);
+    // deltoid: hangs off the torso and turns half as far as the arm, so raising the arm stretches the shoulder instead of opening a seam
+    const dl = grp(spine, shW * s, 0.43, 0, 'dl' + k); add(dl, new THREE.SphereGeometry(0.08, 14, 10), m.shirt, -0.012 * s, -0.035, 0).scale.set(thick * 0.95, 1.25, thick * 0.92);
+    const el = grp(sh, 0, -0.29, 0, 'el' + k); add(el, new THREE.CapsuleGeometry(0.045, 0.19, 4, 8), m.skin, 0, -0.135, 0).scale.set(thick, 1, thick);
+    const hand = grp(el, 0, -0.27, 0, 'hand' + k); add(hand, new THREE.SphereGeometry(0.05, 10, 8), m.skin, 0, -0.02, 0);
+    if (opt.glove && (s > 0 || !opt.mitt)) { // a glove on each hand; only the one on the non-throwing hand is shown
+      const gl = add(hand, new THREE.SphereGeometry(opt.mitt ? 0.13 : 0.11, 12, 8), mat(0x6b3e1e), 0, -0.07, 0.02); gl.scale.set(1, 1.15, 0.55); gl.visible = s > 0; J['glove' + k] = gl;
+    }
+    if (opt.ball) { const b = add(hand, new THREE.SphereGeometry(0.04, 10, 8), mat(0xffffff), 0, -0.05, 0.03); b.visible = false; J['ball' + k] = b; }
+    const hp = grp(hips, 0.1 * s * Math.sqrt(bulk), -0.03, 0, 'hip' + k); add(hp, new THREE.CapsuleGeometry(0.075, 0.3, 4, 8), m.pants, 0, -0.22, 0).scale.set(thick, 1, thick);
+    const kn = grp(hp, 0, -0.44, 0, 'kn' + k); add(kn, new THREE.CapsuleGeometry(0.06, 0.32, 4, 8), m.sock, 0, -0.22, 0).scale.set(thick, 1, thick);
+    const an = grp(kn, 0, -0.44, 0, 'an' + k); add(an, new THREE.BoxGeometry(0.1, 0.07, 0.27), m.shoe, 0, -0.035, 0.06);
+  }
+  let bat = null;
+  if (opt.bat) { bat = new THREE.Group(); const b = new THREE.Mesh(batGeo, L.bat ? mat(L.bat, { roughness: 0.5 }) : batMat); b.castShadow = true; bat.add(b); root.add(bat); }
+  root.scale.setScalar(L.size || 1);
+  scene.add(root);
+  return { root, J, m, bat, lhW: null, label: null, k: L.size || 1, bulk, mirror: false };
+}
+function setTeam(G, t) { G.m.shirt.color.setHex(t.shirt); G.m.pants.color.setHex(t.pants); G.m.cap.color.setHex(t.cap); G.m.sock.color.setHex(t.socks); }
+
+// two-bone IK: point `upper` at the elbow/knee and `lower` at the target; the joint bends toward `pole` (world space)
+const _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion(), _e = new THREE.Euler();
+function solve(upper, lower, la, lb, target, pole, ok) {
+  const S = upper.getWorldPosition(V()), d = target.clone().sub(S);
+  const dist = clamp(d.length(), 0.05, (la + lb) * 0.999); d.normalize();
+  const cosA = clamp((la * la + dist * dist - lb * lb) / (2 * la * dist), -1, 1), sinA = Math.sqrt(1 - cosA * cosA);
+  const pv0 = pole.clone().sub(S); pv0.addScaledVector(d, -pv0.dot(d));
+  if (pv0.lengthSq() < 1e-8) pv0.set(0, 0, 1); pv0.normalize();
+  const H = S.clone().addScaledVector(d, dist);
+  // the elbow can sit anywhere on a circle around the shoulder->hand line. Take the smallest turn away from the pole that keeps
+  // the arm out of the body (same answer for the same pose, so no flicker), keep turning to the side it went last time,
+  // pin the edge down finely and ease toward it so the elbow glides instead of stepping
+  const at = deg => S.clone().addScaledVector(d, la * cosA).addScaledVector(pv0.clone().applyAxisAngle(d, deg * D2R), la * sinA);
+  let pick = 0;
+  if (ok) {
+    const fit = deg => { const e = at(deg); return Math.min(ok(e), ok(e.clone().add(S).multiplyScalar(0.5)), ok(e.clone().add(H).multiplyScalar(0.5))); };
+    const side = lower.userData.side || 1;
+    let want = null, bestC = -1, bestDeg = 0;
+    for (let k = 0; k <= 36 && want == null; k++) for (const sg of k ? [side, -side] : [1]) {
+      const deg = sg * k * 5, c = fit(deg);
+      if (c >= 1) { want = deg; break; }
+      if (c > bestC + 0.02) { bestC = c; bestDeg = deg; }
+    }
+    if (want == null) want = bestDeg;
+    else if (want) { let lo = want - Math.sign(want) * 5, hi = want; for (let i = 0; i < 4; i++) { const m = (lo + hi) / 2; if (fit(m) >= 1) hi = m; else lo = m; } want = hi; }
+    if (want) lower.userData.side = Math.sign(want);
+    const prev = lower.userData.deg ?? want;
+    pick = Math.abs(want - prev) > 90 ? want : prev + (want - prev) * 0.45;
+    lower.userData.deg = pick;
+  }
+  const E = at(pick);
+  const P = upper.parent.getWorldQuaternion(_q1);
+  upper.quaternion.setFromUnitVectors(DN, E.clone().sub(S).normalize().applyQuaternion(P.clone().invert()));
+  const U = P.clone().multiply(upper.quaternion).invert();
+  lower.quaternion.setFromUnitVectors(DN, H.sub(E).normalize().applyQuaternion(U));
+}
+const rot = (o, a) => o.rotation.set(a[0] * D2R, a[1] * D2R, a[2] * D2R);
+// pose fields (all [x,y,z]): pos = hips offset, hip/sp/hd = degrees, lf/rf = feet (root frame), lh/rh = hands and le/re = elbow poles (spine frame), bg/bd = bat grip/direction (root frame)
+// a left-hander is the right-handed pose seen in a mirror (x flipped, left and right swapped)
+const MX = a => [-a[0], a[1], a[2]], MR = a => [a[0], -a[1], -a[2]];
+function mirrorPose(P) {
+  const o = { ...P, pos: MX(P.pos), hip: MR(P.hip), sp: MR(P.sp), hd: MR(P.hd), lf: MX(P.rf), rf: MX(P.lf), lh: MX(P.rh), rh: MX(P.lh), le: MX(P.re), re: MX(P.le) };
+  if (P.bg) { o.bg = MX(P.bg); o.bd = MX(P.bd); }
+  return o;
+}
+function applyPose(G, P) {
+  const J = G.J, k = G.k, bulk = G.bulk;
+  if (G.mirror) P = mirrorPose(P);
+  J.hips.position.set(P.pos[0], 0.9 + P.pos[1], P.pos[2]); rot(J.hips, P.hip); rot(J.spine, P.sp); rot(J.head, P.hd);
+  G.root.updateMatrixWorld(true);
+  const footQ = G.root.getWorldQuaternion(_q2).clone().multiply(_q1.setFromEuler(_e.set(0, P.hip[1] * D2R, 0)));
+  for (const [side, f, s] of [['L', P.lf, 1], ['R', P.rf, -1]]) {
+    solve(J['hip' + side], J['kn' + side], 0.44 * k, 0.44 * k, G.root.localToWorld(V(...f)), J.hips.localToWorld(V(0.2 * s, -0.3, 1.5)));
+    J['an' + side].quaternion.copy(J['kn' + side].getWorldQuaternion(_q1).invert().multiply(footQ));
+  }
+  let lt, rt;
+  if (G.bat) G.bat.visible = !!P.bg;
+  if (P.bg && G.bat) {
+    // hands never inside the chest or head; and far enough forward that an arm reaching across the chest can go round it (bulky builds)
+    const gl = J.spine.worldToLocal(clear(G, G.root.localToWorld(V(...P.bg)), 0.3 * bulk, 0.34 * bulk));
+    for (let i = 0; i < 12; i++) {
+      const blocked = [J.shL, J.shR].some(sh => [0.3, 0.45].some(f => { const m = sh.position.clone().lerp(gl, f); return m.y > -0.05 && m.y < 0.56 && Math.hypot(m.x / (0.22 * bulk), m.z / (0.155 * bulk)) < 1; }));
+      if (!blocked) break; gl.z += 0.02;
+    }
+    const grip = G.root.worldToLocal(J.spine.localToWorld(gl));
+    G.bat.position.copy(grip); G.bat.quaternion.setFromUnitVectors(UPV, V(...P.bd).normalize()); G.bat.updateMatrixWorld(true);
+    const knob = G.bat.localToWorld(V(0, 0, 0)), top = G.bat.localToWorld(V(0, P.bt ? P.bt[0] : 0.1, 0)); // bottom hand at the knob
+    [lt, rt] = G.mirror ? [top, knob] : [knob, top];
+  } else {
+    // a hand reaching across the chest (follow-through) comes forward until its arm can go round the chest
+    const reach = (sh, l) => { for (let i = 0; i < 12; i++) { if (![0.3, 0.45].some(f => { const m = sh.position.clone().lerp(l, f); return m.y > -0.05 && m.y < 0.56 && Math.hypot(m.x / (0.22 * bulk), m.z / (0.155 * bulk)) < 1; })) break; l.z += 0.02; } return J.spine.localToWorld(l); };
+    const hand = (sh, p) => reach(sh, J.spine.worldToLocal(clear(G, J.spine.localToWorld(V(...p)), 0.27 * bulk, 0.2 * bulk)));
+    lt = G.lhW || hand(J.shL, P.lh); rt = hand(J.shR, P.rh);
+  }
+  const outside = w => { // >= 1: clear of the torso (elliptic cylinder) and the head (sphere)
+    const p = J.spine.worldToLocal(w.clone()), head = Math.hypot(p.x, p.y - 0.65, p.z) / 0.17;
+    return Math.min(head, p.y < -0.05 || p.y > 0.56 ? 9 : Math.hypot(p.x / (0.22 * bulk), p.z / (0.155 * bulk)));
+  };
+  solve(J.shL, J.elL, 0.29 * k, 0.27 * k, lt, J.spine.localToWorld(V(...P.le)), outside);
+  solve(J.shR, J.elR, 0.29 * k, 0.27 * k, rt, J.spine.localToWorld(V(...P.re)), outside);
+  J.dlL.quaternion.slerpQuaternions(Q0, J.shL.quaternion, 0.5); J.dlR.quaternion.slerpQuaternions(Q0, J.shR.quaternion, 0.5);
+}
+const Q0 = new THREE.Quaternion();
+// pushes a world point out of the torso (an elliptic cylinder, a bit fatter than the mesh) and the head (a sphere)
+function clear(G, w, rx = 0.27, rz = 0.2) {
+  const p = G.J.spine.worldToLocal(w.clone());
+  if (p.y > -0.08 && p.y < 0.58) {
+    const e = Math.hypot(p.x / rx, p.z / rz);
+    if (e < 1) { if (e < 1e-3) p.z = rz; else { p.x /= e; p.z /= e; } }
+  }
+  const h = V(p.x, p.y - 0.66, p.z), hl = h.length();
+  if (hl < 0.2) p.copy(h.multiplyScalar(0.2 / Math.max(hl, 1e-3)).add(V(0, 0.66, 0)));
+  return G.J.spine.localToWorld(p);
+}
+const DEF = { bt: [0.1, 0, 0], pos: [0, -0.03, 0], hip: [0, 0, 0], sp: [0, 0, 0], hd: [0, 0, 0], lf: [0.12, 0.07, 0], rf: [-0.12, 0.07, 0], lh: [0.24, 0.02, 0.06], rh: [-0.24, 0.02, 0.06], le: [0.6, -0.2, -0.6], re: [-0.6, -0.2, -0.6] };
+// every key gets every field (missing ones carry over from the key before)
+function clip(keys) { let prev = DEF; return keys.map(k => (prev = { ...prev, ...k })); }
+const cr = (p0, p1, p2, p3, t) => p1.map((_, i) => 0.5 * (2 * p1[i] + (-p0[i] + p2[i]) * t + (2 * p0[i] - 5 * p1[i] + 4 * p2[i] - p3[i]) * t * t + (-p0[i] + 3 * p1[i] - 3 * p2[i] + p3[i]) * t * t * t));
+function sample(c, time) { // Catmull-Rom through the keys: smooth speed through every pose
+  const n = c.length;
+  if (time <= c[0].t) return c[0]; if (time >= c[n - 1].t) return c[n - 1];
+  let i = 0; while (c[i + 1].t < time) i++;
+  const k0 = c[Math.max(0, i - 1)], k1 = c[i], k2 = c[i + 1], k3 = c[Math.min(n - 1, i + 2)], u = (time - k1.t) / (k2.t - k1.t), out = {};
+  for (const f in k1) if (f !== 't') out[f] = Array.isArray(k1[f]) ? cr(k0[f], k1[f], k2[f], k3[f], u) : k1[f];
+  return out;
+}
+function mix(a, b, w) { const o = {}; for (const f in a) o[f] = Array.isArray(a[f]) && b[f] ? a[f].map((v, i) => lerp(v, b[f][i], w)) : a[f]; return o; }
+
+// right-handed pitcher, root facing home (+z). From the stretch: side-on, leg lift, stride, arm cocked, release at 1.2 s, follow-through.
+const P_SET = { t: 0, pos: [0, -0.04, 0.15], hip: [0, -85, 0], sp: [6, 0, 0], hd: [0, 82, 0], lf: [0, 0.07, 0.45], rf: [0, 0.07, -0.13], lh: [0.04, 0.2, 0.25], rh: [-0.02, 0.18, 0.27], le: [0.6, -0.5, 0.1], re: [-0.6, -0.5, 0.1] };
+// Keys follow a real delivery: lift -> hands break -> arm swings down and back -> foot plant with the arm in an "L" ->
+// hips open first, shoulders after, arm lays back -> release out front -> arm whips across the body, back leg swings
+// through -> fielding stance -> steps back up onto the rubber. The head keeps looking at home the whole time.
+const PITCH = clip([
+  P_SET,
+  { t: 0.22, pos: [0, -0.02, 0.12], hip: [-2, -92, 0], sp: [9, -2, 0], hd: [0, 92, 0], lf: [-0.1, 0.25, 0.25], lh: [0.03, 0.25, 0.25], rh: [-0.01, 0.23, 0.27] },
+  { t: 0.45, pos: [0, 0.0, 0.06], hip: [-4, -102, 0], sp: [12, -4, 0], hd: [0, 104, 0], lf: [-0.26, 0.55, 0.08], lh: [0.03, 0.3, 0.24], rh: [-0.01, 0.28, 0.26] },
+  { t: 0.68, pos: [0, -0.07, 0.24], hip: [-2, -92, 0], sp: [8, -6, -4], hd: [0, 96, 0], lf: [-0.04, 0.32, 0.6], lh: [0.28, 0.3, 0.2], rh: [-0.28, 0.06, 0.02], re: [-0.5, -0.6, -0.4] },
+  { t: 0.85, pos: [0, -0.15, 0.5], hip: [0, -84, 0], sp: [4, -10, -8], hd: [0, 92, 0], lf: [0.04, 0.16, 1.0], lh: [0.46, 0.38, 0.12], rh: [-0.56, 0.2, -0.12], re: [-0.3, -0.8, -0.6] },
+  { t: 1.0, pos: [0, -0.25, 0.74], hip: [5, -42, 0], sp: [4, -40, -8], hd: [-4, 82, 0], lf: [0.06, 0.07, 1.25], rf: [0, 0.09, -0.08], lh: [0.5, 0.4, 0.16], rh: [-0.44, 0.72, -0.14], re: [-1, 0.3, 0] },
+  { t: 1.1, pos: [0, -0.28, 0.84], hip: [8, -14, 0], sp: [14, -6, -12], hd: [-12, 20, 0], rf: [-0.02, 0.1, 0.0], lh: [0.3, 0.3, 0.22], rh: [-0.3, 0.78, -0.24], re: [-0.6, 0.2, 0.8] },
+  { t: 1.2, pos: [0, -0.31, 0.96], hip: [10, 0, 0], sp: [30, 15, -15], hd: [-24, -12, 0], rf: [-0.05, 0.13, 0.14], lh: [0.16, 0.2, 0.22], rh: [-0.12, 0.88, 0.38], re: [-0.8, 0.3, 0.2] },
+  { t: 1.3, pos: [0, -0.34, 1.0], hip: [13, 12, 0], sp: [44, 24, -6], hd: [-36, -30, 0], rf: [-0.1, 0.28, 0.14], lh: [0.2, 0.12, 0.18], rh: [0.0, 0.32, 0.55], re: [-0.6, 0.5, 0.2] },
+  { t: 1.45, pos: [0, -0.34, 1.02], hip: [15, 22, 0], sp: [50, 34, 0], hd: [-40, -50, 0], rf: [-0.15, 0.5, 0.1], lh: [0.26, 0.08, 0.12], rh: [0.3, -0.12, 0.46], re: [-0.3, 0.3, 0.8] },
+  { t: 1.75, pos: [0, -0.2, 1.1], hip: [6, 4, 0], sp: [22, 4, 0], hd: [-14, -8, 0], lf: [0.2, 0.07, 1.25], rf: [-0.3, 0.07, 1.0], lh: [0.22, 0.0, 0.35], rh: [-0.22, 0.0, 0.35], le: [0.6, -0.2, -0.6], re: [-0.6, -0.2, -0.6] },
+  { t: 2.4, pos: [0, -0.15, 1.1], hip: [5, 0, 0], sp: [16, 0, 0], hd: [-10, 0, 0] },
+  { t: 2.6, pos: [0, -0.07, 0.95], hip: [0, -10, 0], sp: [8, 0, 0], hd: [0, 10, 0], rf: [-0.2, 0.2, 0.75], lh: [0.24, 0.02, 0.08], rh: [-0.24, 0.02, 0.08] },
+  { t: 2.78, pos: [0, -0.05, 0.8], rf: [-0.12, 0.07, 0.52] },
+  { t: 2.97, pos: [0, -0.05, 0.6], hip: [0, -40, 0], hd: [0, 40, 0], lf: [0.12, 0.2, 0.85] },
+  { t: 3.15, pos: [0, -0.05, 0.36], hip: [0, -70, 0], hd: [0, 70, 0], lf: [0.03, 0.07, 0.48], rf: [-0.05, 0.16, 0.18] },
+  { t: 3.32, pos: [0, -0.04, 0.2], rf: [0, 0.07, -0.13] },
+  { ...P_SET, t: 3.6 },
+]);
+const PITCH_END = PITCH[PITCH.length - 1].t;
+
+// right-handed batter, root facing the plate (+z = toward the plate, +x = toward the pitcher)
+// hands start up by the back shoulder, out in front of the chest; elbows hang down (lead one in front, back one behind)
+const B_STANCE = clip([{ pos: [-0.02, -0.1, 0], hip: [0, -5, 0], sp: [12, -12, 0], hd: [-6, 92, 0], lf: [0.42, 0.07, 0.02], rf: [-0.38, 0.07, -0.02], bg: [-0.24, 1.24, 0.26], bd: [-0.35, 0.85, -0.3], le: [0.25, -1, 0.7], re: [-0.7, -0.8, -0.1] }])[0];
+// bunt: squared around to the pitcher, bat level over the plate at the line's height, top hand slid up the barrel
+function buntPose(mid, k = 1) {
+  return { ...B_STANCE, pos: [0.02, -0.2, 0.05], hip: [0, 50, 0], sp: [24, 35, 0], hd: [-16, 0, 0], lf: [0.36, 0.07, 0.14], rf: [-0.26, 0.07, 0.24],
+    bg: [0.34, clamp(mid[1] + 0.03, 0.45, 1.3) / k, 0.12], bd: [0.0, 0.04, 1], bt: [0.42, 0, 0], le: [0.6, -1, 0.3], re: [-0.2, -1, 0.4] };
+}
+// hit by the pitch: turns away from it, hunched, bat dropping
+const B_HURT = { ...B_STANCE, pos: [-0.14, -0.16, -0.05], hip: [0, -35, 0], sp: [22, -45, 12], hd: [12, 40, 0], lf: [0.38, 0.12, -0.02], bg: [-0.3, 1.0, 0.05], bd: [-0.3, 0.4, -0.85] };
+const B_LOAD = { ...B_STANCE, pos: [-0.1, -0.12, 0], hip: [0, -18, 0], sp: [12, -26, 0], hd: [-6, 106, 0], lf: [0.3, 0.2, 0.04], bg: [-0.32, 1.27, 0.2], bd: [-0.45, 0.8, -0.35] };
+// the hands travel a wide arc outside the body: drop into the slot, through the zone, round the front and up over the lead shoulder.
+// The contact key aims the bat's sweet spot at the middle of the swing line ([x, y] on the plate).
+function swingClip(mid, k = 1) { // mid in right-handed terms (a lefty passes x flipped); k = the batter's size
+  const gy = clamp(mid[1] + 0.14, 0.72, 1.3) / k, g = [0.12, gy, 0.44];
+  const sweet = [0.05 / k, mid[1] / k, (mid[0] + 0.85) / k]; // plate point in the batter's root frame
+  const d = sweet.map((v, i) => v - g[i]);
+  return clip([
+    { ...B_LOAD, t: 0 },
+    { t: 0.06, pos: [0.02, -0.15, 0], hip: [0, -4, 0], sp: [14, -22, 0], hd: [-8, 100, 0], lf: [0.58, 0.09, 0.06], bg: [-0.28, 1.16, 0.3], bd: [-0.6, 0.6, -0.5] },
+    { t: 0.11, pos: [0.07, -0.17, 0], hip: [0, 28, 0], sp: [18, -30, 0], hd: [-12, 70, 0], lf: [0.6, 0.07, 0.06], bg: [-0.08, Math.max(gy, 0.98), 0.42], bd: [-0.8, 0.12, -0.55], le: [0.3, -1, 0.6], re: [-0.3, -1, 0.1] },
+    { t: CONTACT_T, pos: [0.1, -0.17, 0], hip: [0, 46, 0], sp: [20, -20, 0], hd: [-22, 0, 0], rf: [-0.36, 0.11, 0.02], bg: g, bd: d, le: [0.6, -0.6, 0.6], re: [-0.2, -1, 0.3] },
+    { t: 0.19, pos: [0.11, -0.16, 0], hip: [0, 64, 0], sp: [18, -2, 0], hd: [-18, -38, 0], bg: [0.34, gy - 0.02, 0.36], bd: [0.7, 0.05, 0.62], le: [0.8, -0.4, 0.2], re: [0, -1, 0.6] },
+    { t: 0.25, hip: [0, 78, 0], sp: [16, 28, 0], hd: [-12, -64, 0], bg: [0.44, 1.1, 0.08], bd: [0.78, 0.2, -0.58], le: [0.6, -0.5, -0.4], re: [0.3, -0.8, 0.6] },
+    { t: 0.34, hip: [0, 86, 0], sp: [13, 60, 0], hd: [-8, -80, 0], rf: [-0.3, 0.16, 0.06], bg: [0.3, 1.38, -0.18], bd: [-0.15, 0.4, -0.9], le: [0.8, 0, -0.5], re: [0.4, -0.5, 0.7] },
+    { t: 0.48, hip: [0, 88, 0], sp: [10, 84, 0], hd: [-6, -84, 0], bg: [0.12, 1.5, -0.24], bd: [-0.78, 0.25, -0.55], le: [0.9, 0.2, -0.3], re: [0.2, -0.4, 0.8] },
+    { t: 0.85 },
+    { t: 0.95, hip: [0, 80, 0], sp: [10, 12, 0], hd: [-6, -30, 0], bg: [0.42, 1.42, 0.08], bd: [0.1, 0.95, -0.25], le: [0.9, -0.3, 0.3] },
+    { t: 1.05, pos: [0.08, -0.12, 0], hip: [0, 55, 0], sp: [10, 0, 0], hd: [-6, -20, 0], bg: [0.48, 1.2, 0.3], bd: [0.15, 0.95, 0.15], le: [0.8, -0.6, 0.2], re: [0.2, -1, 0.6] },
+    { t: 1.22, pos: [0.02, -0.08, 0], hip: [0, 30, 0], sp: [10, -10, 0], hd: [-6, 40, 0], lf: [0.5, 0.07, 0.04], rf: [-0.36, 0.07, -0.02], bg: [0.0, 1.12, 0.42], bd: [-0.15, 0.95, -0.1], le: [0.4, -1, 0.5], re: [-0.6, -0.8, 0] },
+    { ...B_STANCE, t: 1.6 },
+  ]);
+}
+const READY = clip([{ pos: [0, -0.2, 0], hip: [6, 0, 0], sp: [26, 0, 0], hd: [-22, 0, 0], lf: [0.3, 0.07, 0.04], rf: [-0.3, 0.07, 0.04], lh: [0.2, -0.06, 0.36], rh: [-0.2, -0.06, 0.36] }])[0];
+// a lunge for a ball going by: low, reaching out to the glove side
+const DIVE = { ...READY, pos: [0.15, -0.42, 0.1], hip: [10, 0, 18], sp: [40, 0, 22], hd: [-35, 0, 0], lf: [0.45, 0.07, -0.1], rf: [-0.25, 0.07, 0.15], lh: [0.55, 0.15, 0.4], rh: [0.1, 0.2, 0.35] };
+const CATCH_UP = { ...READY, pos: [0, -0.05, 0], sp: [4, 0, 0], hd: [-25, 0, 0], lh: [0.2, 0.8, 0.3], rh: [-0.15, 0.7, 0.3] };
+const SQUAT = clip([{ pos: [0, -0.5, 0], hip: [12, 0, 0], sp: [18, 0, 0], hd: [-18, 0, 0], lf: [0.34, 0.07, 0.12], rf: [-0.34, 0.07, 0.12], lh: [0.12, 0.3, 0.45], rh: [-0.2, -0.1, -0.18], le: [0.8, -0.4, 0], re: [-0.8, -0.2, -0.2] }])[0];
+const UMP_POSE = clip([{ pos: [0, -0.3, 0], hip: [8, 0, 0], sp: [30, 0, 0], hd: [-25, 0, 0], lf: [0.3, 0.07, 0.05], rf: [-0.3, 0.07, -0.1], lh: [0.18, -0.25, 0.32], rh: [-0.18, -0.25, 0.32] }])[0];
+const UMP_CALL = { ...UMP_POSE, pos: [0, -0.15, 0], sp: [10, -20, 0], rh: [-0.35, 0.75, 0.15], re: [-1, 0, 0] };
+function runPose(ph) {
+  const s = Math.sin(ph), c = Math.cos(ph);
+  return { ...DEF, pos: [0, -0.1 + Math.abs(c) * 0.05, 0], hip: [6, s * 10, 0], sp: [18, -s * 12, 0], hd: [-14, s * 8, 0],
+    lf: [0.12, 0.07 + Math.max(0, -s) * 0.32, c * 0.48], rf: [-0.12, 0.07 + Math.max(0, s) * 0.32, -c * 0.48],
+    lh: [0.2, 0.18, -c * 0.32], rh: [-0.2, 0.18, c * 0.32], le: [0.5, -0.3, -0.7], re: [-0.5, -0.3, -0.7] };
+}
+
+// name tags
+function setLabel(G, text) {
+  if (G.labelText === text) return; G.labelText = text;
+  if (G.label) { G.root.remove(G.label); G.label.material.map.dispose(); G.label.material.dispose(); G.label = null; }
+  if (!text) return;
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64; const x = c.getContext('2d');
+  x.font = '700 30px "Noto Sans KR", sans-serif'; const w = Math.min(248, x.measureText(text).width + 28);
+  x.fillStyle = 'rgba(8,14,26,.75)'; x.beginPath(); x.roundRect(128 - w / 2, 8, w, 48, 24); x.fill();
+  x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, 128, 33);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  G.label = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false })); G.label.scale.set(1.4, 0.35, 1); G.label.position.y = 2.25; G.label.renderOrder = 9;
+  G.root.add(G.label);
+}
+
+// ---------- the cast ----------
+// one body per character; the current player's is shown
+const pitchers3 = CHARS.pit.map(c => { const G = makeGuy(HOME, { glove: true, ball: true, look: c.look }); G.root.position.set(0, 0.25, -18.44); return G; });
+const batters3 = CHARS.bat.map(c => makeGuy(AWAY, { helmet: true, bat: true, look: c.look }));
+const decks3 = CHARS.bat.map(c => makeGuy(AWAY, { helmet: true, bat: true, look: c.look }));
+let pitcher = pitchers3[1], batter = batters3[1], onDeck = decks3[1];
+function showOne(list, i, on) { list.forEach((G, j) => { G.root.visible = on && j === i; }); return list[i]; }
+const catcher = makeGuy(HOME, { glove: true, mitt: true, helmet: true }); catcher.root.position.set(0, 0, 1.0); catcher.root.rotation.y = Math.PI;
+const ump = makeGuy(UMP); ump.root.position.set(-0.45, 0, 1.75); ump.root.rotation.y = Math.PI;
+const droppedBat = mesh(batGeo, batMat, -0.6, 0.035, 0.9); droppedBat.rotation.set(Math.PI / 2, 0, 0.7); droppedBat.visible = false;
+const FIELD = [[28, 38], [40, 15], [40, -15], [28, -38], [85, -28], [95, 0], [85, 28]].map(([d, a]) => V(Math.sin(a * D2R) * d, 0, -Math.cos(a * D2R) * d));
+const fielders = FIELD.map(h => { const G = makeGuy(HOME, { glove: true }); G.root.position.copy(h); return { G, home: h, ph: Math.random() * 6, face: Math.atan2(-h.x, -h.z) }; });
+const runners = Array.from({ length: 5 }, () => { const G = makeGuy(AWAY, { helmet: true }); G.root.visible = false; return { G, ph: 0 }; });
+const ball = mesh(new THREE.SphereGeometry(0.045, 14, 10), mat(0xffffff, { emissive: 0x333333 }));
+ball.castShadow = true; ball.visible = false;
+const ballShadow = mesh(new THREE.CircleGeometry(0.07, 12), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.35, depthWrite: false }));
+ballShadow.rotation.x = -Math.PI / 2;
+const TRAIL = 14, trail = Array.from({ length: TRAIL }, (_, i) => mesh(new THREE.SphereGeometry(0.032 * (1 - i / TRAIL * 0.6), 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 * (1 - i / TRAIL), depthWrite: false })));
+let teamHalf = -1;
+function dressTeams(half) {
+  if (half === teamHalf) return; teamHalf = half;
+  const def = half === 0 ? HOME : AWAY, off = half === 0 ? AWAY : HOME;
+  [...pitchers3, catcher, ...fielders.map(f => f.G)].forEach(G => setTeam(G, def));
+  [...batters3, ...decks3, ...runners.map(r => r.G)].forEach(G => setTeam(G, off));
+}
+
+// strike zone (everyone), swing line (batter), aim marker (pitcher), where the last pitch crossed (everyone)
+const zone = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.43, 0.59, 0.001)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthTest: false }));
+zone.renderOrder = 4;
+zone.position.set(0, 0.775, 0); scene.add(zone);
+const lineMesh = mesh(batGeo, new THREE.MeshBasicMaterial({ color: 0xffd9a0, transparent: true, opacity: 0.45, depthWrite: false, depthTest: false }));
+lineMesh.renderOrder = 5;
+const spotMesh = mesh(new THREE.RingGeometry(0.048, 0.062, 32), new THREE.MeshBasicMaterial({ color: 0xff2a2a, side: THREE.DoubleSide, depthTest: false }));
+spotMesh.renderOrder = 6;
+const aimMesh = mesh(new THREE.RingGeometry(0.055, 0.075, 24), new THREE.MeshBasicMaterial({ color: 0xff5252, side: THREE.DoubleSide }));
+let swingLine = [-0.45, 0.78, 0.45, 0.78];
+try { const s = JSON.parse(localStorage.getItem('bb-line')); if (Array.isArray(s) && s.length === 4 && s.every(Number.isFinite)) swingLine = s; } catch {}
+let lineLefty = false; // the knob goes on the batter's side: left for a right-handed batter, right for a lefty
+function placeLine(l) { // a see-through bat lying on the line, barrel over the plate
+  let [x1, y1, x2, y2] = l; if (lineLefty ? x1 < x2 : x1 > x2) [x1, y1, x2, y2] = [x2, y2, x1, y1];
+  const len = Math.hypot(x2 - x1, y2 - y1) || 0.01, dir = V((x2 - x1) / len, (y2 - y1) / len, 0), k = len / 0.87;
+  lineMesh.scale.set(1.15, k, 1.15); lineMesh.quaternion.setFromUnitVectors(UPV, dir);
+  lineMesh.position.set(x1, y1, 0.02).addScaledVector(dir, 0.07 * k);
+}
+placeLine(swingLine);
+let aim = [0, 0.78], typeIdx = 0;
+
+// ---------- network ----------
+let secret = '';
+try { secret = localStorage.getItem('bb-id') || ''; } catch {}
+if (!/^[a-z0-9]{16,40}$/.test(secret)) {
+  secret = Array.from(crypto.getRandomValues(new Uint8Array(24)), b => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('');
+  try { localStorage.setItem('bb-id', secret); } catch {}
+}
+let S = null, offset = 0, synced = false, bestRtt = 1e9, online = true;
+const sNow = () => performance.now() + offset; // server clock (ms)
+const post = (p, b) => fetch(p + '?id=' + secret, { method: 'POST', body: JSON.stringify(b || {}) }).catch(() => {});
+(async function poll() {
+  const t0 = performance.now();
+  try {
+    const r = await fetch('/state?id=' + secret, { cache: 'no-store' });
+    if (!r.ok) throw 0;
+    const s = await r.json(), t1 = performance.now(), rtt = t1 - t0;
+    bestRtt = Math.min(bestRtt + 1, rtt);
+    if (rtt <= bestRtt + 20) { const o = s.now - (t0 + t1) / 2; offset = synced ? offset + (o - offset) * 0.25 : o; synced = true; }
+    S = s; online = true;
+    if (joined && !S.me) post('/join', { name: myName, ...myChar }).then(() => post('/pick', myPick)); // server forgot us (restart / long sleep)
+  } catch { online = false; }
+  $('net').style.display = online ? 'none' : 'block';
+  setTimeout(poll, online ? 90 : 1000);
+})();
+
+// ---------- lobby / roles ----------
+let joined = false, myName = '', myPick = { team: null, pos: 'batter', watch: false }, myChar = { bat: 1, pit: 1, hand: 'R' };
+try { $('nick').value = localStorage.getItem('bb-nick') || ''; } catch {}
+try { const c = JSON.parse(localStorage.getItem('bb-char')); if (c && [0, 1, 2].includes(c.bat) && [0, 1, 2].includes(c.pit) && ['L', 'R'].includes(c.hand)) myChar = c; } catch {}
+let portraitsUrl = { bat: [], pit: [] };
+lineLefty = myChar.hand === 'L'; placeLine(swingLine);
+function renderPicker() {
+  for (const kind of ['bat', 'pit']) {
+    $(kind === 'bat' ? 'pickBat' : 'pickPit').innerHTML = CHARS[kind].map((c, i) =>
+      `<div class="card ${myChar[kind] === i ? 'on' : ''}" data-k="${kind}" data-i="${i}"><img alt="" src="${portraitsUrl[kind][i] || ''}"><div class="nm">${c.name}</div><div class="ds">${c.desc}</div>` +
+      Object.entries(c.stats).map(([n, v]) => `<div class="stat"><span>${n}</span>${[1, 2, 3, 4, 5].map(j => `<i class="${j <= v ? 'on' : ''}"></i>`).join('')}</div>`).join('') + '</div>').join('');
+  }
+  document.querySelectorAll('.card').forEach(el => el.onclick = () => { myChar[el.dataset.k] = +el.dataset.i; saveChar(); renderPicker(); });
+  document.querySelectorAll('.hands button').forEach(b => { b.classList.toggle('on', b.dataset.h === myChar.hand); b.onclick = () => { myChar.hand = b.dataset.h; saveChar(); renderPicker(); }; });
+}
+function saveChar() { lineLefty = myChar.hand === 'L'; placeLine(swingLine); try { localStorage.setItem('bb-char', JSON.stringify(myChar)); } catch {} }
+async function join(how) {
+  const name = $('nick').value.trim().slice(0, 10);
+  if (!name) { $('nick').focus(); $('nick').placeholder = '닉네임을 먼저 정해 주세요!'; return; }
+  try { localStorage.setItem('bb-nick', name); } catch {}
+  myName = name; audio();
+  const r = await post('/join', { name, ...myChar });
+  if (r?.status === 409) { myChar = lookOf(S.you); saveChar(); renderPicker(); $('pickMsg').textContent = '이번 회에는 이미 선수 교체를 했어요. 다음 회에 바꿀 수 있어요.'; return; } // keep the picker on what the server has
+  $('pickMsg').textContent = '';
+  if (!joined || how === 'watch') { myPick = how === 'watch' ? { team: null, pos: myPick.pos, watch: true } : { ...myPick, watch: false }; await post('/pick', myPick); }
+  joined = true; $('lobby').hidden = true; $('panel').hidden = false; $('hud').hidden = false; $('chat').hidden = false;
+  const ios = /iP(hone|od)/.test(navigator.userAgent), standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  try { if (ios && !standalone && !localStorage.getItem('bb-iostip')) { $('iosTip').hidden = false; $('iosTip').querySelector('button').onclick = () => { $('iosTip').hidden = true; try { localStorage.setItem('bb-iostip', '1'); } catch {} }; } } catch {}
+  if (TOUCH) { document.body.classList.add('playing'); document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape')).catch(() => {}); } // iPhone can't lock: the rotate hint covers it
+  $('room').hidden = how === 'watch' || meP()?.inGame && S.g.started;
+}
+document.querySelectorAll('#lobby .roles button').forEach(b => b.onclick = () => join(b.dataset.r));
+$('nick').addEventListener('keydown', e => { if (e.key === 'Enter') join('enter'); });
+const meP = () => S?.players.find(p => p.id === S.you);
+const pick = ch => { myPick = { ...myPick, ...ch }; post('/pick', myPick); };
+document.querySelectorAll('#segTeam button').forEach(b => b.onclick = () => pick({ team: +b.dataset.t, watch: false }));
+document.querySelectorAll('#segPos button').forEach(b => b.onclick = () => pick({ pos: b.dataset.p }));
+$('readyBtn').onclick = () => post('/ready', { ready: !meP()?.ready });
+$('reqBtn').onclick = () => post('/request');
+$('watchBtn').onclick = () => pick(myPick.watch ? { watch: false } : { watch: true, team: null });
+$('roomClose').onclick = () => { $('room').hidden = true; };
+$('roomBtn').onclick = () => { $('room').hidden = false; };
+$('charBtn2').onclick = $('charBtn').onclick = () => { $('lobby').hidden = false; $('pickMsg').textContent = ''; renderPicker(); };
+$('menuBtn').onclick = () => $('panel').classList.toggle('open');
+let endArm = 0; // force-end needs a second click within 3 s
+$('endBtn').onclick = () => {
+  if (Date.now() - endArm < 3000) { endArm = 0; post('/end'); }
+  else { endArm = Date.now(); $('endBtn').classList.add('arm'); $('endBtn').textContent = '한 번 더 누르면 종료'; setTimeout(() => { $('endBtn').classList.remove('arm'); $('endBtn').textContent = '경기 강제종료'; }, 3000); }
+  $('endBtn').blur();
+};
+$('recBtn').onclick = () => toggleRecords(); $('recClose').onclick = () => toggleRecords(false);
+function toggleRecords(show = $('records').hidden) { $('records').hidden = !show; if (show) renderRecords(); }
+
+const nameOf = id => S?.players.find(p => p.id === id)?.name || S?.rec.bat[id]?.name || S?.rec.pit[id]?.name || '-';
+// who is who: character index and hand, from the player list (the AI is in it too)
+const lookOf = id => { const p = S?.players.find(q => q.id === id); return { bat: p?.bat ?? 1, pit: p?.pit ?? 1, hand: p?.hand || 'R' }; };
+const flipX = (mid, hand) => hand === 'L' ? [-mid[0], mid[1]] : mid; // plate point in right-handed terms
+const batRole = () => !!S?.batters.includes(S.you), pitRole = () => !!S?.pitchers.includes(S.you);
+const amPitcherUp = () => S && joined && S.pitchers[0] === S.you;
+const amBatterUp = () => S && joined && S.batters[0] === S.you;
+const curPitch = () => S?.g.pitch && (S.g.phase === 'pitch' || S.g.phase === 'result' || S.g.phase === 'over') ? S.g.pitch : null;
+const curResult = () => { const p = curPitch(), r = S?.g.result; return p && r && r.pitchId === p.id ? r : null; };
+
+// ---------- input ----------
+let buntHeld = false, buntW = 0;
+let charging = false, chargeT0 = 0, swingStart = -1e9, swingClipNow = swingClip([0, 0.78]), swungFor = 0, thrownAt = 0;
+const charge = () => charging ? clamp((performance.now() - chargeT0) / 900, 0, 1) : 0;
+const arrows = new Set();
+const sayEl = $('say');
+$('chat').addEventListener('submit', e => {
+  e.preventDefault();
+  const t = sayEl.value.trim().slice(0, 80);
+  if (t) post('/say', { text: t });
+  sayEl.value = ''; sayEl.blur();
+});
+sayEl.addEventListener('keydown', e => { if (e.code === 'Escape') sayEl.blur(); e.stopPropagation(); }); // typing never swings or pitches
+sayEl.addEventListener('focus', () => { charging = false; buntHeld = false; arrows.clear(); });
+addEventListener('keydown', e => {
+  if (!joined || document.activeElement === $('nick')) return;
+  if (e.code === 'Enter' && document.activeElement !== sayEl && !/INPUT|TEXTAREA/.test(document.activeElement?.tagName)) { e.preventDefault(); sayEl.focus(); return; }
+  if (e.code === 'Tab') { e.preventDefault(); toggleRecords(); return; }
+  if (e.code.startsWith('Arrow')) { arrows.add(e.code); e.preventDefault(); }
+  if (e.repeat) return;
+  if (e.code === 'KeyF') { charging = true; chargeT0 = performance.now(); }
+  if (e.code === 'KeyC' && amPitcherUp()) typeIdx = (typeIdx + 1) % TYPES.length;
+  if (e.code === 'KeyD' && charging) fire();
+  if (e.code === 'KeyS' && batRole()) { buntHeld = true; tryBunt(); }
+});
+addEventListener('keyup', e => { if (e.code === 'KeyF') charging = false; if (e.code === 'KeyS') buntHeld = false; arrows.delete(e.code); });
+addEventListener('blur', () => { charging = false; buntHeld = false; arrows.clear(); });
+// on-screen buttons do what the keys do
+const hold = (el, down, up) => {
+  el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); el.classList.add('on'); down(); });
+  for (const ev of ['pointerup', 'pointercancel']) el.addEventListener(ev, e => { e.preventDefault(); el.classList.remove('on'); up?.(); });
+  el.addEventListener('contextmenu', e => e.preventDefault());
+};
+hold($('tCharge'), () => { charging = true; chargeT0 = performance.now(); }, () => { charging = false; });
+hold($('tFire'), () => { audio(); if (charging) fire(); else { charging = true; chargeT0 = performance.now() - 450; fire(); } }); // tapped alone: a half-power swing/pitch
+hold($('tAlt'), () => { if (amPitcherUp()) typeIdx = (typeIdx + 1) % TYPES.length; else if (batRole()) { buntHeld = true; tryBunt(); } }, () => { buntHeld = false; });
+// squaring to bunt commits once the pitch is on its way (holding S before the pitch works too)
+function tryBunt() {
+  const p = curPitch();
+  if (!buntHeld || !amBatterUp() || !p || S.g.phase !== 'pitch' || swungFor === p.id || sNow() > p.arriveAt - 100) return;
+  swungFor = p.id; post('/swing', { bunt: true, line: swingLine });
+}
+function fire() {
+  const power = charge(); charging = false; audio();
+  if (amPitcherUp() && S.g.phase === 'ready' && performance.now() - thrownAt > 1500) {
+    thrownAt = performance.now();
+    post('/pitch', { type: TYPES[typeIdx][0], power: +power.toFixed(3), ax: +aim[0].toFixed(3), ay: +aim[1].toFixed(3) });
+  } else if (batRole() && !buntHeld && performance.now() - swingStart > 1200) {
+    const mid = [(swingLine[0] + swingLine[2]) / 2, (swingLine[1] + swingLine[3]) / 2];
+    swingClipNow = swingClip(flipX(mid, myChar.hand), CHARS.bat[myChar.bat].look.size); swingStart = performance.now();
+    const p = curPitch();
+    if (amBatterUp() && p && S.g.phase === 'pitch' && swungFor !== p.id) { swungFor = p.id; post('/swing', { at: Math.round(sNow()), power: +power.toFixed(3), line: swingLine }); }
+  }
+}
+// draw the swing line (batter) or click a target (pitcher) on the plate
+const ray = new THREE.Raycaster(), platePlane = new THREE.Plane(V(0, 0, 1), 0);
+function platePoint(e) {
+  const r = canvas.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), camera);
+  const p = V(); return ray.ray.intersectPlane(platePlane, p) ? [clamp(p.x, -0.9, 0.9), clamp(p.y, 0.15, 1.5)] : null;
+}
+let drawFrom = null;
+canvas.addEventListener('pointerdown', e => {
+  if (!joined) return; const p = platePoint(e); if (!p) return;
+  if (batRole()) { drawFrom = p; canvas.setPointerCapture(e.pointerId); }
+  else if (amPitcherUp()) aim = [clamp(p[0], -0.7, 0.7), clamp(p[1], 0.2, 1.4)];
+});
+canvas.addEventListener('pointermove', e => { if (!drawFrom) return; const p = platePoint(e); if (p) placeLine([...drawFrom, ...p]); });
+canvas.addEventListener('pointerup', e => {
+  if (!drawFrom) return; const p = platePoint(e) || drawFrom;
+  swingLine = Math.hypot(p[0] - drawFrom[0], p[1] - drawFrom[1]) < 0.08 ? [p[0] - 0.45, p[1], p[0] + 0.45, p[1]] : [...drawFrom, ...p];
+  swingLine = swingLine.map(v => +v.toFixed(3)); drawFrom = null; placeLine(swingLine);
+  try { localStorage.setItem('bb-line', JSON.stringify(swingLine)); } catch {}
+});
+
+// ---------- sound (made on the fly, no files) ----------
+let AC = null;
+function audio() { if (!AC) try { AC = new AudioContext(); } catch {} if (AC?.state === 'suspended') AC.resume(); return AC; }
+function noise(dur, freq, q, vol, attack = 0) {
+  const a = AC; if (!a || a.state !== 'running') return;
+  const n = a.sampleRate * dur | 0, b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) { const t = i / n; d[i] = (Math.random() * 2 - 1) * (attack ? Math.min(1, t / attack) * (1 - t) : (1 - t) ** 3); }
+  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  s.buffer = b; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q; g.gain.value = vol;
+  s.connect(f).connect(g).connect(a.destination); s.start();
+}
+const sfx = { crack: () => { noise(0.09, 3200, 0.7, 1.6); noise(0.05, 900, 1.5, 1); }, pop: () => noise(0.07, 380, 1.2, 1.6), cheer: (big) => noise(big ? 3.5 : 2, 1100, 0.35, big ? 0.9 : 0.5, 0.25) };
+
+// ---------- ball flight ----------
+function pitchAt(p, u) {
+  const [Rx, Ry, Rz] = p.R, [Ax, Ay] = p.A, [Tx, Ty] = p.T;
+  const e = Math.pow(Math.max(u, 0), p.bp || 2); // the break grows late in the flight
+  return V(Rx + (Ax - Rx) * u + (Tx - Ax) * e, Ry + (Ay - Ry) * u + (Ty - Ay) * e + p.loft * 4 * u * (1 - u), Rz - Rz * u);
+}
+const U_GLOVE = 1 + 0.6 / 16.9; // the catcher's mitt is 0.6 m behind the plate
+let preG = null; // the game state before the current play (what the field shows until a side change is called)
+let play = null; // the batted ball of the current pitch: landing spot, fielder, timings
+function planPlay(p, r) {
+  const uc = (r.contactAt - p.releaseAt) / (p.arriveAt - p.releaseAt), start = pitchAt(p, Math.min(uc, 1.02));
+  const a = r.spray * D2R, ground = r.la < 10 && r.kind !== 'foul';
+  const caught = ['FO', 'LO', 'PO'].includes(r.kind);
+  const land = V(Math.sin(a) * r.dist, r.kind === 'HR' ? clamp(3.6 + (r.dist - fenceAt(r.spray)) * 0.6, 4, 16) : caught ? 1.4 : 0.04, -Math.cos(a) * r.dist);
+  const roll = r.kind === 'HR' || caught ? 0 : r.kind === 'foul' ? 4 : ground ? (r.kind === 'GO' ? 0 : 22) : 12;
+  const rest = r.rest ? V(Math.sin(a) * r.rest, 0.04, -Math.cos(a) * r.rest) : land.clone().add(V(Math.sin(a), 0, -Math.cos(a)).multiplyScalar(roll)); rest.y = Math.min(rest.y, land.y);
+  if (r.pl) return { id: r.pitchId, start, land, rest: V(r.pl.at[0], 0.04, r.pl.at[1]), ground, caught: r.pl.catch, who: r.pl.who, picked: false };
+  let who = r.who ?? -1, recv = -1;
+  if (who < 0 && r.kind !== 'foul' && r.kind !== 'HR') { let best = 1e9; fielders.forEach((f, i) => { const d = f.home.distanceTo(V(land.x, 0, land.z)); if (d < best) { best = d; who = i; } }); }
+  if (r.to) { // a hit: who takes the throw at r.to (on a ball to left the shortstop goes out, so the second baseman covers second)
+    recv = r.to === 1 ? 0 : r.to === 2 ? (r.spray < 0 ? 1 : 2) : 3;
+    if (recv === who) recv = r.to === 2 ? 3 - recv : r.to === 1 ? 1 : 2;
+  }
+  return { id: r.pitchId, start, land, rest, ground, caught, who, recv, picked: false };
+}
+const handOf = (who, throwing) => (who === 'C' ? catcher : fielders[who].G).J[throwing ? 'handR' : 'handL'].getWorldPosition(V());
+function batted(r, pl, ts) { // ball position after contact
+  const tau = (ts - r.contactAt) / r.hang;
+  if (tau <= 1) {
+    const p = pl.start.clone().lerp(pl.land, tau);
+    p.y = pl.ground ? Math.max(0.04, pl.start.y * Math.abs(Math.cos(tau * Math.PI * 2.5)) * (1 - tau) + 0.04) : lerp(pl.start.y, pl.land.y, tau) + 4 * r.apex * tau * (1 - tau);
+    return p;
+  }
+  const after = ts - r.contactAt - r.hang, f = fielders[pl.who];
+  if (pl.caught) return f.G.J.handL.getWorldPosition(V());
+  if (r.pl) { // the server's play: it rolls to the fielder, then goes glove to glove along the throws
+    const t = ts - r.contactAt, P = r.pl;
+    if (P.dive && t >= r.hang && t < P.pick) return handOf(P.who); // snagged
+    if (!P.catch && t < P.pick) { const k = clamp((t - r.hang) / Math.max(1, P.pick - r.hang), 0, 1), q = pl.land.clone().lerp(pl.rest, 1 - (1 - k) ** 2); q.y = 0.04 + (pl.ground ? 0 : 0.7 * Math.abs(Math.sin(k * Math.PI * 2)) * (1 - k)); return q; }
+    let holder = P.who;
+    for (const th of P.throws) {
+      if (t < th.rel) break;
+      if (t < th.arr) { const k = (t - th.rel) / (th.arr - th.rel), from = handOf(th.by, true), to = handOf(th.rcv), L = from.distanceTo(to), q = from.lerp(to, k); q.y += L * 0.08 * 4 * k * (1 - k); return q; }
+      if (th.err) {
+        const base = BASES[th.to].clone().setY(0.6), loose = V(th.loose[0], 0.04, th.loose[1]), k = clamp((t - th.arr) / 700, 0, 1);
+        if (th.dead || t < th.back) { const q = base.lerp(loose, 1 - (1 - k) ** 2); q.y = Math.max(0.04, 0.6 * (1 - k)); return q; }
+        holder = th.fetch; continue;
+      }
+      holder = th.rcv;
+    }
+    return handOf(holder, holder === P.who && !P.catch && !P.throws.length);
+  }
+  if (r.kind === 'GO' || r.kind === 'SAC') { // thrown to first
+    const k = clamp(after / 650, 0, 1), from = f.G.J.handL.getWorldPosition(V()), to = fielders[pl.who === 0 ? 1 : 0].G.J.handL.getWorldPosition(V());
+    if (k >= 1) return to;
+    const p = from.lerp(to, k); p.y += 2.5 * k * (1 - k); return p;
+  }
+  if (pl.picked && f) return f.G.J.handL.getWorldPosition(V());
+  const p = pl.land.clone().lerp(pl.rest, 1 - Math.exp(-after / 700)); p.y = Math.max(0.04, p.y * Math.exp(-after / 200)); return p;
+}
+
+// ---------- per-frame actors ----------
+const clockT0 = performance.now();
+let fx = { id: 0 }, camLook = V(-0.2, 0.75, -18);
+function moveGuy(o, target, speed, dt) { // walk/run toward target; returns true when moving
+  const p = o.G.root.position, d = V(target.x - p.x, 0, target.z - p.z), len = d.length();
+  if (len < 0.15) return false;
+  const step = Math.min(len, speed * dt); p.addScaledVector(d.normalize(), step);
+  o.face = Math.atan2(d.x, d.z); o.ph += step * 2.3; return true;
+}
+function update(dt) {
+  const t = (performance.now() - clockT0) / 1000, ts = window.__ts ?? sNow(), g = S?.g; // __ts: test hook to freeze time
+  const p = curPitch(), r = curResult();
+  // on the third out the teams keep their colours and places until the "공수교대" call (1.5 s after the play ends)
+  if (g && (!r || g.phase !== 'result' && g.phase !== 'over')) preG = g;
+  const vg = g && r && preG && preG.half !== g.half && ts < r.showAt + 1500 ? preG : g;
+  if (g) dressTeams(vg.half);
+  const pitcherId = p ? p.pitcher : S?.pitchers[0], batterId = p ? p.batter : S?.batters[0];
+  // the pitch remembers who threw/batted with what, so a mid-play character change doesn't swap bodies
+  const pl = p ? { pit: p.pchar ?? 1, hand: p.hand || 'R' } : lookOf(pitcherId), bl = p ? { bat: p.bchar ?? 1, hand: p.bhand || 'R' } : lookOf(batterId);
+  const bs = bl.hand === 'L' ? -1 : 1; // the batter's side: x flips for a lefty
+
+  // pitcher
+  pitcher = showOne(pitchers3, pl.pit, !!pitcherId); pitcher.mirror = pl.hand === 'L';
+  pitcher.J.gloveL.visible = !pitcher.mirror; pitcher.J.gloveR.visible = pitcher.mirror;
+  setLabel(pitcher, pitcherId ? nameOf(pitcherId) : '');
+  const pt = window.__pt ?? (p ? (ts - p.startAt) / 1000 : 99); // __pt: test hook to freeze the windup
+  const pp = (p || window.__pt != null) && pt < PITCH_END ? sample(PITCH, pt) : { ...P_SET, sp: [6 + Math.sin(t * 1.3) * 1.5, 0, 0] };
+  applyPose(pitcher, pp);
+  const holding = !p || pt < 1.2 || g.phase === 'ready';
+  pitcher.J.ballR.visible = holding && !pitcher.mirror; pitcher.J.ballL.visible = holding && pitcher.mirror;
+
+  // batter: stance (waggle) -> load while F is held -> swing. Gone from the box once he runs (hit, walk, hit by pitch).
+  const running = r && r.moves?.some(m => m.from === 0) && ts > (IN_PLAY(r.kind) ? r.contactAt + 250 : r.showAt);
+  batter = showOne(batters3, bl.bat, !!batterId && !running); batter.mirror = bs < 0;
+  batter.root.position.set(-0.85 * bs, 0, 0.05); batter.root.rotation.y = Math.PI / 2 * bs;
+  droppedBat.visible = !!running; droppedBat.position.x = -0.6 * bs;
+  ump.root.position.x = -0.45 * bs;
+  setLabel(batter, batterId ? nameOf(batterId) : '');
+  let bp = { ...B_STANCE, bd: [B_STANCE.bd[0] + Math.sin(t * 1.8) * 0.12, B_STANCE.bd[1], B_STANCE.bd[2] + Math.sin(t * 1.8) * 0.08] };
+  const mineBatting = amBatterUp() || (batRole() && batterId === S?.you);
+  if (mineBatting) bp = mix(bp, B_LOAD, charge());
+  // bunt: mine while S is held, someone else's once the server has it; eased in and out
+  if (buntHeld) tryBunt();
+  const otherBunt = !mineBatting && p && g.swing?.bunt && ts < p.arriveAt + 600;
+  buntW = lerp(buntW, (mineBatting && buntHeld) || otherBunt ? 1 : 0, 1 - Math.exp(-dt * 10));
+  if (buntW > 0.01) {
+    const l = otherBunt ? g.swing.line : swingLine;
+    bp = mix(bp, buntPose(flipX([(l[0] + l[2]) / 2, (l[1] + l[3]) / 2], bl.hand), batter.k), buntW);
+  }
+  let st = (performance.now() - swingStart) / 1000;
+  if (!mineBatting && p && g.swing && g.swing.at && !g.swing.bunt) { // someone else's swing, from the server
+    if (fx.swingFor !== p.id) { fx.swingFor = p.id; fx.otherClip = swingClip(flipX([(g.swing.line[0] + g.swing.line[2]) / 2, (g.swing.line[1] + g.swing.line[3]) / 2], bl.hand), batter.k); }
+    st = (ts - g.swing.at) / 1000; if (st < 1.6) bp = sample(fx.otherClip, Math.max(0, st));
+  } else if (mineBatting && st < 1.6) bp = sample(swingClipNow, st);
+  if (r?.kind === 'HBP' && ts > p.arriveAt - 60) bp = mix(bp, B_HURT, Math.sin(clamp((ts - p.arriveAt + 60) / 900, 0, 1) * Math.PI * 0.6)); // flinch away
+  if (window.__bt != null) { bp = sample(swingClip([0, 0.78], batter.k), window.__bt); batter.root.visible = true; } // test hook: freeze the swing
+  applyPose(batter, bp);
+
+  // on deck: practice swings
+  const deckId = S?.batters.length > 1 ? S.batters[S.batters[0] === batterId ? 1 : 0] : null;
+  const dl = lookOf(deckId), ds = dl.hand === 'L' ? -1 : 1;
+  onDeck = showOne(decks3, dl.bat, !!deckId && deckId !== batterId); onDeck.mirror = ds < 0;
+  onDeck.root.position.set(-9 * ds, 0, 5); onDeck.root.rotation.y = (Math.PI / 2 - 0.5) * ds;
+  setLabel(onDeck, deckId ? nameOf(deckId) : '');
+  const dt4 = (t % 4.5) - 2.5;
+  applyPose(onDeck, dt4 > 0 && dt4 < 1.6 ? sample(swingClip([0, 0.8], onDeck.k), dt4) : B_STANCE);
+
+  // ball
+  let bpos = null;
+  if (p && ts >= p.releaseAt) {
+    const contactAt = r && r.swung && r.kind !== 'miss' ? r.contactAt : Infinity;
+    if (ts < contactAt) {
+      const u = (ts - p.releaseAt) / (p.arriveAt - p.releaseAt);
+      if (r?.kind === 'HBP' && u >= 1) { // off the batter and down into the dirt
+        const k = Math.min(1.4, (ts - p.arriveAt) / 1000), h = p.T[1] + 1.2 * k - 4.9 * k * k;
+        bpos = V(p.T[0] + 1.1 * k * bs, h > 0.04 ? h : 0.04 + Math.abs(Math.sin(k * 9)) * 0.15 * (1.4 - k), -0.9 * k);
+        if (fx.pop !== p.id) { fx.pop = p.id; noise(0.12, 220, 1, 1.4); }
+      } else bpos = u >= U_GLOVE ? catcher.J.handL.getWorldPosition(V()) : pitchAt(p, u);
+      if (u >= 1 && fx.pop !== p.id && (!r || !r.swung || r.kind === 'miss')) { fx.pop = p.id; sfx.pop(); }
+    } else {
+      if (!play || play.id !== r.pitchId) play = planPlay(p, r);
+      bpos = batted(r, play, ts);
+      if (fx.crack !== p.id) { fx.crack = p.id; sfx.crack(); }
+    }
+  }
+  // trail: little ghosts of the ball back along its path, so the break shows
+  const tu = p && !(r && r.swung && r.kind !== 'miss' && ts >= r.contactAt) ? (ts - p.releaseAt) / (p.arriveAt - p.releaseAt) : -1;
+  trail.forEach((m, i) => { const u = tu - (i + 1) * 0.035; m.visible = tu > 0 && tu < 1.02 && u > 0.02; if (m.visible) m.position.copy(pitchAt(p, u)); });
+  ball.visible = !!bpos;
+  if (bpos) { ball.position.copy(bpos); ballShadow.position.set(bpos.x, 0.03, bpos.z); }
+  ballShadow.visible = !!bpos && bpos.y < 30;
+
+  // catcher: mitt follows the pitch in
+  catcher.lhW = null;
+  if (p && ts > p.releaseAt - 300 && r?.kind !== 'HBP' && (!r || !r.swung || r.kind === 'miss' || ts < r.contactAt)) {
+    const u = clamp((ts - p.releaseAt) / (p.arriveAt - p.releaseAt), 0, 1);
+    catcher.lhW = V(lerp(0, p.T[0], u), lerp(0.75, p.T[1], u), 0.55);
+  }
+  applyPose(catcher, SQUAT);
+  // umpire: strike call
+  const call = r && ['strike', 'miss'].includes(r.kind) || (r?.text === '삼진 아웃!');
+  const ct = r ? (ts - r.showAt) / 1000 : 9;
+  applyPose(ump, call && ct > -0.1 && ct < 1.3 ? mix(UMP_POSE, UMP_CALL, Math.sin(clamp(ct / 1.2, 0, 1) * Math.PI)) : UMP_POSE);
+
+  // fielders: one goes to the ball, the rest hold; everyone jogs home between pitches
+  const live = r && play && play.id === r.pitchId && IN_PLAY(r.kind) && ts > r.contactAt + 150 && g.phase !== 'ready';
+  fielders.forEach((f, i) => {
+    let target = f.home, speed = 5, catchPose = false, throwPose = null, faceTo = null;
+    if (live) {
+      const since = ts - r.contactAt - 150, t = ts - r.contactAt;
+      if (r.pl) { // the server's play: field it, cover a base and take the throw, throw on (double play)
+        const P = r.pl, gets = P.throws.find(th => th.rcv === i), th = P.throws.find(th => th.by === i && t > th.rel - 450 && t < th.rel + 450);
+        if (i === P.who) { target = play.rest; speed = clamp(f.home.distanceTo(play.rest) / Math.max(0.3, ((P.dive ? r.hang : P.pick) - 300) / 1000), 3, 8.5);
+          if (P.dive && t > r.hang - 250 && t < P.pick - 150) { faceTo = V(0, 0, 0); throwPose = DIVE; f.G.root.position.lerp(V(play.rest.x, 0, play.rest.z), 1 - Math.exp(-dt * 12)); } // the dive covers the last stretch
+          catchPose = P.catch && t > P.pick - 600 && t < P.pick + 500; }
+        if (i !== P.who && !P.catch && P.throws.every(th => th.rcv !== i || t < th.rel - 1500)) {
+          const R = play.rest, L = Math.hypot(R.x, R.z) || 1, u = V(R.x / L, 0, R.z / L), h = f.home;
+          const proj = h.x * u.x + h.z * u.z, along = clamp(proj, 0, L), spot = play.ground ? u.clone().multiplyScalar(along) : V(play.land.x, 0, play.land.z);
+          const far = h.distanceTo(spot), tBall = play.ground ? along / Math.max(1, L) * Math.min(r.hang, P.pick) : r.hang; // when the ball gets there
+          if (far < (i < 4 ? 14 : 30) && t < tBall + 900 && !(play.ground && proj > L - 1)) { // a grounder fielded in front of him never reaches him
+            target = spot; speed = 7.5;
+            if (t > tBall - 250 && f.G.root.position.distanceTo(spot) < 4) { faceTo = ball.position; throwPose = DIVE; } // too late: dives at it
+          }
+        }
+        if (gets) { target = BASES[gets.to]; speed = 7.5; catchPose = t > gets.rel - 300 && t < gets.arr + 600; }
+        const chase = P.throws.find(th => th.err && !th.dead && th.fetch === i && t > th.arr - 300);
+        if (chase) { target = V(chase.loose[0], 0, chase.loose[1]); speed = clamp(f.G.root.position.distanceTo(target) / Math.max(0.3, (chase.back - t) / 1000), 3, 9); catchPose = false; }
+        if (th) { faceTo = BASES[th.to]; throwPose = sample(PITCH, lerp(0.75, 1.55, clamp((t - th.rel + 450) / 900, 0, 1))); }
+      } else if (i === play.who) {
+        if (play.caught) { target = play.land; speed = Math.max(3, f.home.distanceTo(V(play.land.x, 0, play.land.z)) / Math.max(0.2, (r.hang - 150) / 1000)); catchPose = since > r.hang - 600; }
+        else if (r.kind === 'GO' || r.kind === 'SAC') { target = play.land; speed = 9; }
+        else { target = since > r.hang ? ball.position : play.land; speed = 7.5; if (since > r.hang && f.G.root.position.distanceTo(V(ball.position.x, 0, ball.position.z)) < 1.2) play.picked = true; }
+      }
+      if (i === (play.who === 0 ? 1 : 0) && (r.kind === 'GO' || r.kind === 'SAC')) { target = V(18.6, 0, -19.6); speed = 7; catchPose = since > r.hang + 300; }
+    }
+    const moving = !throwPose && moveGuy(f, target, speed, dt);
+    const look = faceTo || (live ? ball.position : V(0, 0, 0));
+    if (!moving) f.face = Math.atan2(look.x - f.G.root.position.x, look.z - f.G.root.position.z);
+    f.G.root.rotation.y = f.face;
+    applyPose(f.G, throwPose || (moving ? runPose(f.ph) : catchPose ? CATCH_UP : READY));
+  });
+
+  // runners: moves of the current play are animated along the base paths, others stand on their base
+  const show = [];
+  if (g && !(vg === g && preG && preG.half !== g.half && r)) { // after the side-change call the bases are empty
+    const anim = r && g.phase === 'result' && r.moves?.length;
+    const start = anim ? (IN_PLAY(r.kind) ? r.contactAt + 250 : r.showAt) : 0;
+    if (anim) {
+      const dist = Math.max(0, ts - start) / 1000 * (r.rs || 7.5);
+      for (const m of r.moves) {
+        if (m.legs) {
+          const t = ts - r.contactAt, legs = m.legs;
+          if ((m.out && t > m.outAt + 700) || (m.from === 0 && (!legs.length || t <= legs[0].start))) continue;
+          let leg = legs.find(l => t < l.arr) || legs[legs.length - 1];
+          if (!leg) { show.push({ name: m.name + (m.out && t > m.outAt ? ' 아웃' : ''), pos: BASES[m.from].clone(), moving: false }); continue; }
+          const k = clamp((t - leg.start) / Math.max(1, leg.arr - leg.start), 0, 1), stopped = m.out && t > m.outAt;
+          if (!m.out && m.to === 4 && leg === legs[legs.length - 1] && k >= 1) continue; // scored
+          const { pos, dir } = basePath(leg.from, leg.to, (leg.to - leg.from) * 27.43 * k);
+          show.push({ name: m.name + (stopped ? ' 아웃' : ''), pos, dir, moving: k > 0 && k < 1 && !stopped });
+          continue;
+        }
+        const total = (m.to - m.from) * 27.43, done = dist >= total;
+        if ((done && (m.to === 4 || m.out)) || (m.from === 0 && ts <= start)) continue; // the batter is still drawn in the box until he starts running
+        const { pos, dir } = basePath(m.from, m.to, Math.min(dist, total));
+        show.push({ name: m.name, pos, dir, moving: !done && dist > 0 });
+      }
+      if (vg !== g) vg.bases.forEach((b, i) => { if (b && !r.moves.some(m => m.from === i + 1)) show.push({ name: b.name, pos: BASES[i + 1].clone(), moving: false }); }); // third out: the stranded runners wait for the side change
+      else { const targets = new Set(r.moves.filter(m => !m.out).map(m => m.to)); g.bases.forEach((b, i) => { if (b && !targets.has(i + 1)) show.push({ name: b.name, pos: BASES[i + 1].clone(), moving: false }); }); }
+    } else vg.bases.forEach((b, i) => { if (b) show.push({ name: b.name, pos: BASES[i + 1].clone(), moving: false }); });
+  }
+  runners.forEach((rn, i) => {
+    const s = show[i]; rn.G.root.visible = !!s; if (!s) return;
+    rn.G.root.position.copy(s.pos); setLabel(rn.G, s.name);
+    if (s.moving) { rn.ph += dt * (r?.rs || 7.5) * 2.3; rn.G.root.rotation.y = Math.atan2(s.dir.x, s.dir.z); }
+    else rn.G.root.rotation.y = Math.atan2(-s.pos.x, -s.pos.z) + Math.PI; // facing out to the field
+    applyPose(rn.G, s.moving ? runPose(rn.ph) : READY);
+  });
+
+  // what only I see
+  const meBat = batRole() && joined, mePitch = amPitcherUp();
+  zone.visible = true; lineMesh.visible = meBat; aimMesh.visible = mePitch && g?.phase === 'ready';
+  // where the last pitch crossed the plate: shown to everyone once it gets there, until the next pitch
+  const lp = g?.pitch; spotMesh.visible = !!lp && ts >= lp.arriveAt;
+  if (spotMesh.visible) spotMesh.position.set(lp.T[0], lp.T[1], 0.03);
+  if (mePitch) {
+    const sp = 0.6 * dt;
+    if (arrows.has('ArrowLeft')) aim[0] -= sp; if (arrows.has('ArrowRight')) aim[0] += sp;
+    if (arrows.has('ArrowUp')) aim[1] += sp; if (arrows.has('ArrowDown')) aim[1] -= sp;
+    aim = [clamp(aim[0], -0.7, 0.7), clamp(aim[1], 0.2, 1.4)]; aimMesh.position.set(aim[0], aim[1], 0.02);
+  }
+
+  // camera: behind the plate; follows the ball once it is put in play
+  let cp = V(1.3 * bs, 2.9, 6.4), cl = V(-0.2 * bs, 0.75, -18), k = 2.5; // over the shoulder away from the batter
+  // phones: through the catcher's eyes, zoomed in, so the zone is big enough to draw on and hit
+  let catcherCam = TOUCH;
+  if (TOUCH) { cp = V(0, 1.05, 2.7); cl = V(0, 0.9, -18); }
+  if (r && r.swung && r.kind !== 'miss' && ts > r.contactAt + 120 && g.phase !== 'ready') {
+    const b = ball.position; cp = V(b.x * 0.3, 14 + Math.max(0, b.y) * 0.3, 22 + b.z * 0.08); cl = b.clone(); k = 1.6; catcherCam = false;
+  }
+  const fov = catcherCam ? 40 : 48;
+  if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); if (catcherCam) { camera.position.copy(cp); camLook.copy(cl); } }
+  catcher.root.visible = ump.root.visible = !catcherCam; // we are the catcher; the umpire would be behind us
+  if (window.__cam) { cp = V(...window.__cam[0]); cl = V(...window.__cam[1]); k = 99; } // test hook: fixed camera
+  camera.position.lerp(cp, 1 - Math.exp(-dt * k)); camLook.lerp(cl, 1 - Math.exp(-dt * (k > 50 ? k : 5))); camera.lookAt(camLook);
+
+  // result banner and sounds when the play is done
+  if (r && fx.show !== r.pitchId && ts >= r.showAt && ts - r.showAt < 2000) {
+    fx.show = r.pitchId;
+    banner(r.text, IN_PLAY(r.kind) || r.kind === 'foul' ? `타구속도 ${r.ev}km/h · 비거리 ${r.dist}m` : '', r.kind === 'HR' ? '#ffcc33' : ['1B', '2B', '3B'].includes(r.kind) ? '#7dffb0' : '#fff');
+    if (['1B', '2B', '3B', 'HR'].includes(r.kind)) sfx.cheer(r.kind === 'HR');
+    const pi = $('pinfo'); pi.textContent = `${r.name} ${r.kmh}km/h`; pi.style.display = 'block';
+    if (g.msg) setTimeout(() => banner(g.msg, '', '#ffcc33'), 1500);
+  }
+}
+function basePath(from, to, dist) {
+  let seg = from, rem = dist;
+  while (seg < to) {
+    const a = BASES[seg], b = BASES[seg + 1], L = a.distanceTo(b);
+    if (rem < L) return { pos: a.clone().lerp(b, rem / L), dir: b.clone().sub(a) };
+    rem -= L; seg++;
+  }
+  return { pos: BASES[to].clone(), dir: BASES[to].clone().sub(BASES[to - 1]) };
+}
+let bannerT = 0;
+function banner(text, sub, color) {
+  const b = $('banner'); b.innerHTML = esc(text) + (sub ? `<small>${esc(sub)}</small>` : ''); b.style.color = color;
+  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+}
+
+// ---------- HUD ----------
+let shownG = null, hudKey = '';
+function updateHud() {
+  if (!S) return;
+  const g = S.g, r = g.result;
+  if (!r || (window.__ts ?? sNow()) >= r.showAt + (preG && preG.half !== g.half ? 1500 : 0) || !shownG) shownG = g; // the board waits for the play to finish
+  const b = shownG;
+  drawBig(b);
+  $('inn').textContent = `${b.inning}회 ${b.half ? '말' : '초'}`;
+  $('phase').textContent = { idle: '선수 대기 중', ready: '투구 준비', pitch: '투구 중', result: '플레이', over: '경기 종료' }[g.phase];
+  $('scA').textContent = b.score[0]; $('scH').textContent = b.score[1];
+  $('rowA').className = b.half ? '' : 'bat'; $('rowH').className = b.half ? 'bat' : '';
+  document.querySelectorAll('.cnt .b').forEach((e, i) => e.classList.toggle('on', i < b.balls));
+  document.querySelectorAll('.cnt .s').forEach((e, i) => e.classList.toggle('on', i < b.strikes));
+  document.querySelectorAll('.cnt .o').forEach((e, i) => e.classList.toggle('on', i < b.outs));
+  [1, 2, 3].forEach(i => $('b' + i).classList.toggle('on', !!b.bases[i - 1]));
+  const p = curPitch(), pid = p && g.phase !== 'ready' ? p.pitcher : S.pitchers[0], bid = p && g.phase !== 'ready' ? p.batter : S.batters[0];
+  $('wP').textContent = pid ? nameOf(pid) : g.started ? '-' : '경기 시작 전';
+  const pL = lookOf(pid), bL = lookOf(bid);
+  $('wPs').textContent = pid ? `${CHARS.pit[pL.pit].name} · ${pL.hand === 'L' ? '좌투' : '우투'}${S.rec.pit[pid] ? ` · 투구 ${S.rec.pit[pid].NP}` : ''}` : '';
+  $('wB').textContent = bid ? nameOf(bid) : g.started ? '-' : '대기실에서 준비 중';
+  const bst = bid && S.rec.bat[bid]; $('wBs').textContent = bid ? `${CHARS.bat[bL.bat].name} · ${bL.hand === 'L' ? '좌타' : '우타'}${bst ? ` · ${bst.AB}타수 ${bst.H}안타` : ''}` : '';
+  $('wN').textContent = S.batters.filter(id => id !== bid).slice(0, 2).map(nameOf).join(', ') || '-';
+
+  const over = $('over');
+  if (g.phase === 'over') {
+    over.style.display = 'block';
+    over.innerHTML = `<b>${esc(g.msg || '경기 종료')}</b>원정 ${g.score[0]} : ${g.score[1]} 홈 · ${Math.max(0, Math.ceil((g.overAt + 20000 - sNow()) / 1000))}초 후 대기실로`;
+  } else over.style.display = 'none';
+  if (!$('records').hidden) renderRecords();
+  if (!$('lobby').hidden) {
+    const live = $('live'), on = g.started && g.phase !== 'over';
+    live.className = 'live' + (on ? ' on' : '');
+    live.textContent = on ? `🔴 지금 경기 중이에요 · ${g.inning}회${g.half ? '말' : '초'} · 원정 ${g.score[0]} : ${g.score[1]} 홈 · 입장해서 같이하기 요청을 보낼 수 있어요` : `대기실 · ${S.players.filter(p => !p.ai).length}명 접속 중 · 모두 준비완료하면 경기 시작`;
+  }
+  if (!joined) return;
+
+  renderRoom(g);
+  const me = meP(), TN = ['원정팀', '홈팀'], PN = { batter: '타자', pitcher: '투수' };
+  const li = ids => ids.length ? ids.map(id => `<li class="${id === S.you ? 'me' : ''}">${esc(nameOf(id))}</li>`).join('') : '<li class="none">없음</li>';
+  const ce = $('charBtn'), sub = S.me?.subbed && me?.inGame && g.started && g.phase !== 'over';
+  ce.disabled = !!sub; ce.textContent = sub ? '선수 교체 완료 (다음 회에 다시)' : '선수 교체 (캐릭터 · 손)';
+  $('endBtn').hidden = !me?.inGame || !g.started || g.phase === 'over';
+  const key = JSON.stringify([S.batters, S.pitchers, S.players, g.half, g.started]);
+  if (key !== hudKey) {
+    hudKey = key;
+    $('myState').textContent = !me ? '-' : me.watch ? '관전 중' : me.team == null ? '대기실에서 팀을 골라 주세요' :
+      `${TN[me.team]} ${PN[me.pos]} · ${me.inGame && g.started ? '경기 중' : me.req ? '참가 요청 중' : g.started ? '대기 중' : me.ready ? '준비완료' : '준비 전'}`;
+    $('qBh').textContent = g.started ? `공격 ${TN[g.half]} 타순` : '타순';
+    $('qPh').textContent = g.started ? `수비 ${TN[1 - g.half]} 투수 순서` : '투수';
+    $('qB').innerHTML = li(S.batters); $('qP').innerHTML = li(S.pitchers);
+    const w = S.players.filter(x => !x.ai && !(x.inGame && g.started)).map(x => x.name); $('qW').textContent = w.length ? w.join(', ') : '없음';
+  }
+
+  // controls
+  const gauge = `<div class="gauge"><i style="width:${(charge() * 100).toFixed(0)}%"></i></div>`;
+  let h;
+  if (amPitcherUp()) {
+    h = `<div class="types">${TYPES.map(([, n], i) => `<span class="${i === typeIdx ? 'on' : ''}">${n}</span>`).join('')}</div>` + gauge +
+      `<div class="keys">${g.phase === 'ready' ? `<kbd>C</kbd> 구종 · <kbd>←↑↓→</kbd>/클릭 코스 · <kbd>F</kbd> 꾹 힘 모으기 → <kbd>D</kbd> 던지기` : g.phase === 'idle' ? '타자가 들어오면 던질 수 있어요' : '투구 중…'}</div>`;
+  } else if (batRole()) {
+    const n = S.batters.indexOf(S.you);
+    h = (amBatterUp() ? gauge + `<div class="keys">마우스로 존에 스윙 라인 그리기 · <kbd>F</kbd> 꾹 힘 모으기 → 타이밍 맞춰 <kbd>D</kbd> 스윙 · <kbd>S</kbd> 꾹 번트</div>`
+      : `<div class="keys">타순 대기 중 · ${n > 0 ? `${n}명 뒤에 타석` : '곧 차례'} · 미리 스윙 라인을 그려 두세요</div>`);
+  } else if (pitRole()) {
+    const n = S.pitchers.indexOf(S.you);
+    h = `<div class="keys">수비 중 · 투수 순서 ${n + 1}번째 · 반 이닝마다 투수가 바뀌어요</div>`;
+  } else {
+    const me = meP();
+    h = `<div class="keys">${me?.watch ? '관전 중' : !g.started ? '대기실에서 팀·포지션을 고르고 준비완료를 눌러 주세요' : me?.inGame ? '수비 중' : '경기 중이에요 · 대기실에서 같이하기 요청을 보낼 수 있어요'} · <kbd>Tab</kbd> 기록판</div>`;
+  }
+  $('hud').innerHTML = h;
+  if (TOUCH) { // which buttons make sense right now
+    const pit = amPitcherUp(), bat = batRole();
+    $('touch').hidden = !pit && !bat;
+    $('tFire').textContent = pit ? '던지기' : '스윙'; $('tAlt').textContent = pit ? '구종' : '번트';
+  }
+}
+// ---------- waiting room, toasts, join requests ----------
+let roomKey = '', lastEv = -1, wasStarted = null, reqKey = '';
+// chat feed: new lines slide in, fade out after 7 s, at most 6 on screen
+let lastChat = -1;
+const TEAM_C = ['#8fb2ff', '#ff9a9a'];
+function showFeed(m) {
+  const feed = $('feed'), d = document.createElement('div'), b = document.createElement('b');
+  d.className = 'msg'; b.textContent = m.name; b.style.setProperty('--c', m.name === '알림' ? '#ffcc33' : TEAM_C[m.team] || '#fff');
+  d.append(b, document.createTextNode(' ' + m.text)); feed.append(d);
+  const live = [...feed.children].filter(c => !c.leaving);
+  if (live.length > (TOUCH ? 3 : 6)) fadeOut(live[0]); // phones: room for three under the score board
+  setTimeout(() => fadeOut(d), 7000);
+}
+function fadeOut(d) {
+  if (d.leaving || !d.isConnected) return; d.leaving = true;
+  d.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-8px)' }], { duration: 1400, easing: 'ease-in', fill: 'forwards' }).finished
+    .then(() => d.animate([{ height: d.offsetHeight + 'px' }, { height: '0px', paddingTop: '0px', paddingBottom: '0px', marginBottom: '-6px' }], { duration: 250, fill: 'forwards' }).finished)
+    .then(() => d.remove(), () => d.remove());
+}
+function toast(text) { const d = document.createElement('div'); d.textContent = text; $('toasts').append(d); setTimeout(() => d.remove(), 4500); }
+function renderRoom(g) {
+  const me = meP(); if (!me) return;
+  // notices: only ones that arrive after I came in
+  for (const e of S.events || []) if (e.seq > lastEv) { if (lastEv >= 0) showFeed({ name: '알림', text: e.text }); }
+  if (S.chat?.length && S.chat.at(-1).seq < lastChat) lastChat = 0; // server restarted: numbering starts over
+  for (const m of S.chat || []) if (m.seq > lastChat && lastChat >= 0) showFeed(m);
+  lastChat = Math.max(lastChat, ...(S.chat || []).map(m => m.seq), 0);
+  lastEv = Math.max(lastEv, ...(S.events || []).map(e => e.seq), 0);
+  // the room opens by itself when a game ends and closes when my game starts
+  if (wasStarted !== null && wasStarted !== g.started) $('room').hidden = g.started && me.inGame;
+  wasStarted = g.started;
+  // requests to join my game
+  const reqs = me.inGame && g.started && !g.over ? S.players.filter(p => p.req) : [];
+  const rk = JSON.stringify(reqs.map(p => [p.id, p.team, p.pos]));
+  if (rk !== reqKey) {
+    reqKey = rk;
+    $('reqs').innerHTML = reqs.map(p => `<div>🙋 ${esc(p.name)}님이 같이하고 싶어해요 (${p.team ? '홈' : '원정'}팀 ${p.pos === 'pitcher' ? '투수' : '타자'}) <button data-id="${p.id}" data-ok="1">수락</button><button class="no" data-id="${p.id}">거절</button></div>`).join('');
+    $('reqs').querySelectorAll('button').forEach(b => b.onclick = () => post('/accept', { id: b.dataset.id, ok: !!b.dataset.ok }));
+  }
+  if ($('room').hidden) return;
+  const k = JSON.stringify([S.players, g.started, g.over, g.inning, g.half, g.score]);
+  if (k === roomKey) return; roomKey = k;
+  const on = g.started && !g.over;
+  $('roomLive').className = on ? 'on' : '';
+  $('roomLive').textContent = on ? `🔴 경기 중 · ${g.inning}회${g.half ? '말' : '초'} · 원정 ${g.score[0]} : ${g.score[1]} 홈` : '경기 시작 전 · 팀과 포지션을 고르고 모두 준비완료를 누르면 시작해요';
+  // who is (or will be) in the game, by team
+  const people = S.players.filter(p => !p.ai && !p.watch && p.team != null && (!on || p.inGame || p.req));
+  const PN = { batter: '타자', pitcher: '투수' };
+  const row = p => `<li class="${p.id === S.you ? 'me' : ''}">${esc(p.name)}<span class="tag">${PN[p.pos]}</span> ${on ? (p.inGame ? '<span class="ok">경기 중</span>' : '<span class="wait">요청 중</span>') : p.ready ? '<span class="ok">✔ 준비완료</span>' : '<span class="wait">준비 전</span>'}</li>`;
+  ['tA', 'tH'].forEach((el, t) => { const T = people.filter(p => p.team === t); $(el).innerHTML = T.length ? T.map(row).join('') : '<li class="ai">AI가 맡아요</li>'; });
+  // warnings: overlapping positions, missing ones, empty teams
+  const W = [], TN = ['원정팀', '홈팀'], names = a => a.map(p => p.name + '님').join(', ');
+  for (const t of [0, 1]) {
+    const T = people.filter(p => p.team === t), B = T.filter(p => p.pos === 'batter'), P = T.filter(p => p.pos === 'pitcher');
+    if (!T.length) { if (people.length) W.push(['', `${TN[t]}에 사람이 없어요 → AI가 맡아요`]); continue; }
+    if (!P.length && B.length > 1) W.push(['bad', `⚠ ${names(B)}이 ${TN[t]} 타자로 겹쳐요 · 투수가 없어서 수비 땐 돌아가며 던져요`]);
+    else if (!P.length) W.push(['', `${TN[t]}에 투수가 없어요 → 수비 땐 ${names(B)}이 던져요`]);
+    if (!B.length && P.length > 1) W.push(['bad', `⚠ ${names(P)}이 ${TN[t]} 투수로 겹쳐요 · 타자가 없어서 공격 땐 투수가 타석에 서요`]);
+    else if (!B.length) W.push(['', `${TN[t]}에 타자가 없어요 → 공격 땐 ${names(P)}이 타석에 서요`]);
+  }
+  if (people.length === 2 && people[0].team !== people[1].team && people[0].pos === people[1].pos)
+    W.push(['bad', `⚠ 두 분 다 ${PN[people[0].pos]}예요 (겹쳐요) · 한 분은 ${people[0].pos === 'batter' ? '투수' : '타자'}를 골라 주세요`]);
+  if (!on) { const nr = people.filter(p => !p.ready); if (nr.length && nr.length < people.length) W.push(['', `준비 기다리는 중: ${names(nr)}`]); }
+  $('warns').innerHTML = W.map(([c, t]) => `<div class="${c}">${esc(t)}</div>`).join('');
+  // my controls
+  const locked = me.inGame && on;
+  document.querySelectorAll('#segTeam button').forEach(b => { b.classList.toggle('on', me.team === +b.dataset.t); b.disabled = locked; });
+  document.querySelectorAll('#segPos button').forEach(b => { b.classList.toggle('on', me.pos === b.dataset.p); b.disabled = locked; });
+  const rb = $('readyBtn'), qb = $('reqBtn');
+  rb.hidden = on; rb.disabled = me.watch || me.team == null; rb.classList.toggle('on', me.ready); rb.textContent = me.ready ? '준비 취소' : me.team == null ? '팀을 먼저 골라요' : '준비완료';
+  qb.hidden = !on || me.inGame; qb.disabled = me.watch || me.team == null || me.req; qb.textContent = me.req ? '요청 보냄 · 수락 기다리는 중' : me.team == null ? '팀을 먼저 골라요' : '같이하기 요청';
+  $('watchBtn').textContent = me.watch ? '관전 그만' : '관전'; $('watchBtn').disabled = locked;
+  const others = S.players.filter(p => !p.ai && (p.watch || p.team == null) && p.id !== S.you);
+  $('others').textContent = others.length ? `대기실에 있는 사람: ${others.map(p => p.name + (p.watch ? '(관전)' : '(고르는 중)')).join(', ')}` : '';
+}
+function renderRecords() {
+  if (!S) return;
+  const g = S.g, R = S.rec;
+  const ip = o => `${o / 3 | 0}${o % 3 ? '.' + o % 3 : ''}`;
+  const avg = b => b.AB ? (b.H / b.AB).toFixed(3).replace(/^0/, '') : '-';
+  const lineRow = (n, t) => `<tr><td>${n}</td>${Array.from({ length: 9 }, (_, i) => `<td>${g.line[t][i] ?? ''}</td>`).join('')}<td><b>${g.score[t]}</b></td><td>${g.hits[t]}</td><td>${g.errs?.[t] ?? 0}</td></tr>`;
+  const bat = Object.values(R.bat).sort((a, b) => b.H - a.H || b.RBI - a.RBI);
+  const pit = Object.values(R.pit).sort((a, b) => b.outs - a.outs);
+  $('recBody').innerHTML = `
+    <h4>스코어</h4><table><tr><th></th>${Array.from({ length: 9 }, (_, i) => `<th>${i + 1}</th>`).join('')}<th>R</th><th>H</th><th>E</th></tr>${lineRow('원정', 0)}${lineRow('홈', 1)}</table>
+    <h4>타자 기록</h4><table><tr><th>이름</th><th>타석</th><th>타수</th><th>안타</th><th>2루타</th><th>3루타</th><th>홈런</th><th>타점</th><th>득점</th><th>볼넷</th><th>사구</th><th>삼진</th><th>타율</th></tr>
+    ${bat.map(b => `<tr><td>${esc(b.name)}</td><td>${b.PA}</td><td>${b.AB}</td><td>${b.H}</td><td>${b.D}</td><td>${b.T}</td><td>${b.HR}</td><td>${b.RBI}</td><td>${b.R}</td><td>${b.BB}</td><td>${b.HBP || 0}</td><td>${b.SO}</td><td>${avg(b)}</td></tr>`).join('') || '<tr><td colspan="13">아직 기록이 없어요</td></tr>'}</table>
+    <h4>투수 기록</h4><table><tr><th>이름</th><th>이닝</th><th>투구수</th><th>피안타</th><th>피홈런</th><th>볼넷</th><th>사구</th><th>탈삼진</th><th>실점</th></tr>
+    ${pit.map(p => `<tr><td>${esc(p.name)}</td><td>${ip(p.outs)}</td><td>${p.NP}</td><td>${p.H}</td><td>${p.HR}</td><td>${p.BB}</td><td>${p.HBP || 0}</td><td>${p.K}</td><td>${p.R}</td></tr>`).join('') || '<tr><td colspan="9">아직 기록이 없어요</td></tr>'}</table>`;
+}
+
+// ---------- picker portraits ----------
+try {
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(150, 190, false);
+  const sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(28, 150 / 190, 0.1, 50);
+  sc.add(new THREE.HemisphereLight(0xffffff, 0x445566, 2.4)); const dl = new THREE.DirectionalLight(0xffffff, 2.2); dl.position.set(2, 3, 4); sc.add(dl);
+  for (const [kind, list] of [['bat', batters3], ['pit', pitchers3]]) list.forEach((G, i) => {
+    const pos = G.root.position.clone(), ry = G.root.rotation.y, vis = G.root.visible, lab = G.label?.visible;
+    sc.add(G.root); G.root.position.set(0, 0, 0); G.root.rotation.y = kind === 'bat' ? -1.75 : 0.35; // turned so the face looks at the camera G.root.visible = true; if (G.label) G.label.visible = false;
+    applyPose(G, kind === 'bat' ? B_STANCE : P_SET);
+    cam.position.set(0, 1.5 * G.k, 2.9); cam.lookAt(0, 1.22 * G.k, 0);
+    r.render(sc, cam); portraitsUrl[kind][i] = r.domElement.toDataURL();
+    scene.add(G.root); G.root.position.copy(pos); G.root.rotation.y = ry; G.root.visible = vis; if (G.label) G.label.visible = lab;
+  });
+  r.dispose(); r.forceContextLoss();
+} catch (e) { console.warn('portraits', e); }
+renderPicker();
+
+// ---------- loop ----------
+let last = performance.now();
+renderer.setAnimationLoop(() => {
+  const now = performance.now(), dt = Math.min(0.05, (now - last) / 1000); last = now;
+  update(dt); updateHud();
+  renderer.render(scene, camera);
+});
+window.__bb = { get S() { return S; }, get preG() { return preG; }, camera, get pitcher() { return pitcher; }, get batter() { return batter; }, pitchers3, batters3, catcher, ump, buntPose, mirrorPose, sNow, PITCH, sample, applyPose, swingClip };
+</script>
+</body>
+</html>
